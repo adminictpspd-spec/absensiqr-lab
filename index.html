@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Absensi QR Laboratorium</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { background-color: #f8f9fa; }
-    /* Memastikan kotak area scanner memiliki ruang yang jelas di layar */
     #reader { 
       width: 100%; 
       max-width: 450px; 
@@ -38,25 +39,13 @@
       <div class="mb-3">
         <label class="form-label">Pilih Laboratorium</label>
         <select id="lab" class="form-select">
-          <? if (daftarLab.length === 0) { ?>
-            <option value="">Daftar Lab Kosong di Sheet!</option>
-          <? } else { ?>
-            <? for (var i = 0; i < daftarLab.length; i++) { ?>
-              <option value="<?= daftarLab[i] ?>"><?= daftarLab[i] ?></option>
-            <? } ?>
-          <? } ?>
+          <option value="">Memuat daftar lab...</option>
         </select>
       </div>
       <div class="mb-3">
         <label class="form-label">Pilih Keperluan</label>
         <select id="keperluan" class="form-select">
-          <? if (daftarKeperluan.length === 0) { ?>
-            <option value="">Daftar Keperluan Kosong di Sheet!</option>
-          <? } else { ?>
-            <? for (var i = 0; i < daftarKeperluan.length; i++) { ?>
-              <option value="<?= daftarKeperluan[i] ?>"><?= daftarKeperluan[i] ?></option>
-            <? } ?>
-          <? } ?>
+          <option value="">Memuat daftar keperluan...</option>
         </select>
       </div>
       <div class="mb-3">
@@ -86,14 +75,45 @@
   </div>
 </div>
 
-<script>
-  // Memasukkan mini library Html5Qrcode langsung ke dalam script lokal halaman web Anda
-  eval(function(p,a,c,k,e,r){e=function(c){return(c<a?'':e(parseInt(c/a)))+((c=c%a)>35?String.fromCharCode(c+29):c.toString(36))};if(!''.replace(/^/,String)){while(k--)r[e(k)]=k[e(k)]||e(k);k=[function(e){return r[e]}];e=function(){return'\\w+'};c=1};while(k--)if(k[e(k)])p=p.replace(new RegExp('\\b'+e(k)+'\\b','g'),k[e(k)]);return p}('(!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports):"function"==typeof define&&define.amd?define(["exports"],t):t((e="undefined"!=typeof globalThis?globalThis:e||self).Html5Qrcode={})}(this,(function(e){"use strict";}));',1,1,'|||||||'.split('|'),0,{}));
-</script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <script>
+  // =========================================================================
+  // ⚠️ PASTE URL WEB APP (LENGKAP DENGAN /exec) YANG ANDA SALIN DI SINI:
+  // =========================================================================
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwM0RJ6qvs-bAKx9FNtOP96sT6RB8ym8Hglq-wJhPLbtted66dvgcUhe1j-IRWbnopt/exec"; 
+
   let html5QrcodeScanner;
+  let isProcessing = false;
+
+  // Mengambil opsi pilihan otomatis dari sheet saat halaman dibuka di GitHub
+  window.onload = function() {
+    muatOpsiDariSheets();
+  };
+
+  function muatOpsiDariSheets() {
+    fetch(`${WEB_APP_URL}?getOptions=true`)
+      .then(response => response.json())
+      .then(data => {
+        const selectLab = document.getElementById("lab");
+        const selectKeperluan = document.getElementById("keperluan");
+
+        selectLab.innerHTML = '<option value="">-- Pilih Laboratorium --</option>';
+        selectKeperluan.innerHTML = '<option value="">-- Pilih Keperluan --</option>';
+
+        if (data.labs && data.labs.length > 0) {
+          data.labs.forEach(l => { selectLab.innerHTML += `<option value="${l}">${l}</option>`; });
+        }
+        if (data.keperluans && data.keperluans.length > 0) {
+          data.keperluans.forEach(k => { selectKeperluan.innerHTML += `<option value="${k}">${k}</option>`; });
+        }
+      })
+      .catch(err => {
+        console.error("Gagal sinkronisasi data:", err);
+        document.getElementById("lab").innerHTML = '<option value="LAB ANATOMI">LAB ANATOMI</option><option value="LAB FARMA">LAB FARMA</option>';
+        document.getElementById("keperluan").innerHTML = '<option value="PRAKTIKUM">PRAKTIKUM</option><option value="SKRIPSI">SKRIPSI</option>';
+      });
+  }
 
   function lockSetting() {
     if(!document.getElementById('lab').value || !document.getElementById('keperluan').value) {
@@ -103,7 +123,6 @@
     document.getElementById('setupSection').classList.add('d-none');
     document.getElementById('scannerSection').classList.remove('d-none');
     
-    // Konfigurasi ulang agar kotak dipaksa merender tombol izin resmi
     try {
       html5QrcodeScanner = new Html5QrcodeScanner(
         "reader", 
@@ -113,7 +132,7 @@
           rememberLastUsedCamera: true,
           supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
         },
-        /* verbose= */ false
+        false
       );
       html5QrcodeScanner.render(onScanSuccess, onScanFailure);
     } catch (err) {
@@ -122,13 +141,16 @@
   }
 
   function onScanSuccess(decodedText, decodedResult) {
-    if(decodedText) {
+    if(decodedText && !isProcessing) {
+      isProcessing = true;
       kirimDataAbsen(decodedText.trim());
+      // Jeda 2,5 detik agar tidak men-scan berkali-kali secara tidak sengaja
+      setTimeout(() => { isProcessing = false; }, 2500);
     }
   }
 
   function onScanFailure(error) {
-    // Membiarkan pencarian frame qr berjalan terus secara realtime
+    // Membiarkan scanner terus mencari QR code secara real-time
   }
 
   function unlockSetting() {
@@ -150,6 +172,7 @@
     document.getElementById('manualNim').value = "";
   }
 
+  // MENGGUNAKAN METODE FETCH URL WEB APP GITHUB -> GOOGLE SHEETS
   function kirimDataAbsen(nimMhs) {
     let labVal = document.getElementById('lab').value;
     let kepVal = document.getElementById('keperluan').value;
@@ -160,15 +183,25 @@
     notifDiv.innerText = "Sedang memproses data NIM: " + nimMhs + "...";
     notifDiv.classList.remove('d-none');
 
-    google.script.run.withSuccessHandler(function(respon) {
-      if(respon.status === "success") {
-        notifDiv.className = "alert alert-success";
-        if (navigator.vibrate) { navigator.vibrate(200); }
-      } else {
+    // Menembak data ke Google Apps Script menggunakan Fetch API (Menggantikan google.script.run)
+    const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(labVal)}&keperluan=${encodeURIComponent(kepVal)}&catatan=${encodeURIComponent(deskVal)}`;
+
+    fetch(urlKirim)
+      .then(response => response.json())
+      .then(respon => {
+        if(respon.status === "success") {
+          notifDiv.className = "alert alert-success";
+          if (navigator.vibrate) { navigator.vibrate(200); }
+        } else {
+          notifDiv.className = "alert alert-danger";
+        }
+        notifDiv.innerText = respon.pesan;
+      })
+      .catch(err => {
+        console.error(err);
         notifDiv.className = "alert alert-danger";
-      }
-      notifDiv.innerText = respon.pesan;
-    }).prosesAbsen(nimMhs, labVal, kepVal, deskVal);
+        notifDiv.innerText = "Gagal terhubung ke server Google Sheets.";
+      });
   }
 </script>
 </body>
