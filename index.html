@@ -78,12 +78,11 @@
 
     #reader video { width: 100% !important; border-radius: 8px; object-fit: cover; }
 
-
     /* Style komponen rangkuman info di atas kamera */
     .info-log-box {
       background-color: #e9ecef;
       border-radius: 8px;
-      padding: 10px;
+      padding: 12px;
       font-size: 0.95rem;
       max-width: 450px;
       margin: 0 auto 15px auto;
@@ -92,68 +91,70 @@
   </style>
 </head>
 <body>
-  <div class="container py-3">
+<div class="container py-3">
 
   <div class="header-institusi">
     <h2>Kunjungan Laboratorium</h2>
     <h3>Program Studi Kedokteran Program Sarjana</h3>
     <h4>Fakultas Kedokteran dan Ilmu Kesehatan | Universitas Lambung Mangkurat</h4>
   </div>
-<div class="container py-4">
-  <div class="card shadow-sm mb-4" id="setupSection">
-    <div class="card-header bg-primary text-white"><h5 class="mb-0">1. Pengaturan Log Laboratorium</h5></div>
-    <div class="card-body">
-      <div class="mb-3">
-        <label class="form-label">Pilih Laboratorium</label>
-        <select id="lab" class="form-select">
-          <option value="">Memuat daftar lab...</option>
-        </select>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Pilih Keperluan</label>
-        <select id="keperluan" class="form-select">
-          <option value="">Memuat daftar keperluan...</option>
-        </select>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Deskripsi Tambahan / Catatan</label>
-        <textarea id="deskripsi" class="form-control" rows="2" placeholder="Catatan tambahan (opsional)..."></textarea>
-      </div>
-      <button type="button" class="btn btn-success w-100" onclick="lockSetting()">Kunci & Mulai Scan</button>
-    </div>
-  </div>
 
-  <div class="card shadow-sm d-none" id="scannerSection">
-    <div class="card-header bg-dark text-white"><h5 class="mb-0">2. Area Scan QR Code</h5></div>
-    <div class="card-body text-center">
-      
-      <div class="info-log-box shadow-sm border-start border-primary border-3">
-        <div class="row g-2">
-          <div class="col-12">
-            <span class="badge bg-primary me-1">Lab</span> 
-            <strong id="displayLab">-</strong>
-          </div>
-          <div class="col-12">
-            <span class="badge bg-secondary me-1">Keperluan</span> 
-            <strong id="displayKeperluan">-</strong>
-          </div>
-          <div class="col-12" id="boxDisplayCatatan">
-            <span class="badge bg-dark me-1">Catatan</span> 
-            <span id="displayCatatan" class="text-muted italic">-</span>
+  <div class="container py-2">
+    <div class="card shadow-sm mb-4" id="setupSection">
+      <div class="card-header bg-primary text-white"><h5 class="mb-0">1. Pengaturan Log Laboratorium</h5></div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">Pilih Laboratorium</label>
+          <select id="lab" class="form-select">
+            <option value="">Memuat daftar lab...</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Pilih Keperluan</label>
+          <select id="keperluan" class="form-select">
+            <option value="">Memuat daftar keperluan...</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Deskripsi Tambahan / Catatan</label>
+          <textarea id="deskripsi" class="form-control" rows="2" placeholder="Catatan tambahan (opsional)..."></textarea>
+        </div>
+        <button type="button" class="btn btn-success w-100" onclick="lockSetting()">Kunci & Mulai Scan</button>
+      </div>
+    </div>
+
+    <div class="card shadow-sm d-none" id="scannerSection">
+      <div class="card-header bg-dark text-white"><h5 class="mb-0">2. Area Scan QR Code</h5></div>
+      <div class="card-body text-center shadow-sm">
+        
+        <div class="info-log-box border-start border-primary border-3">
+          <div class="row g-2">
+            <div class="col-12">
+              <span class="badge bg-primary me-1">Nama Laboratorium</span> 
+              <strong id="displayLab">-</strong>
+            </div>
+            <div class="col-12">
+              <span class="badge bg-secondary me-1">Keperluan</span> 
+              <strong id="displayKeperluan">-</strong>
+            </div>
+            <div class="col-12" id="boxDisplayCatatan">
+              <span class="badge bg-dark me-1">Catatan</span> 
+              <span id="displayCatatan" class="text-muted fst-italic">-</span>
+            </div>
           </div>
         </div>
+        
+        <div id="reader"></div>
+        
+        <div id="notifManual" class="alert d-none mt-3" style="max-width: 450px; margin: 15px auto 0 auto;"></div>
+        
+        <div class="input-group mb-3 mt-4" style="max-width: 450px; margin: 0 auto;">
+          <input type="text" id="manualNim" class="form-control" placeholder="Input NIM manual jika QR rusak">
+          <button class="btn btn-secondary" type="button" onclick="inputManual()">Submit Manual</button>
+        </div>
+        
+        <button class="btn btn-warning btn-sm mt-2" onclick="unlockSetting()">Ubah Pengaturan Awal</button>
       </div>
-      
-      <div id="reader"></div>
-      
-      <div id="notifManual" class="alert d-none mt-3"></div>
-      
-      <div class="input-group mb-3 mt-4">
-        <input type="text" id="manualNim" class="form-control" placeholder="Input NIM manual jika QR rusak">
-        <button class="btn btn-secondary" type="button" onclick="inputManual()">Submit Manual</button>
-      </div>
-      
-      <button class="btn btn-warning btn-sm" onclick="unlockSetting()">Ubah Pengaturan Awal</button>
     </div>
   </div>
 </div>
@@ -217,7 +218,6 @@
       return;
     }
 
-    // 📌 TEMPELKAN TEKS PILIHAN KE BOX ATAS KAMERA SEBELUM PINDAH HALAMAN
     document.getElementById('displayLab').innerText = labVal;
     document.getElementById('displayKeperluan').innerText = kepVal;
     
@@ -225,7 +225,7 @@
       document.getElementById('displayCatatan').innerText = deskVal;
       document.getElementById('boxDisplayCatatan').classList.remove('d-none');
     } else {
-      document.getElementById('boxDisplayCatatan').classList.add('d-none'); // Sembunyikan baris catatan jika kosong
+      document.getElementById('boxDisplayCatatan').classList.add('d-none');
     }
 
     document.getElementById('setupSection').classList.add('d-none');
@@ -275,17 +275,18 @@
   function unlockSetting() {
     if(html5Qrcode && html5Qrcode.isScanning) {
       html5Qrcode.stop().then(() => {
-        document.getElementById('reader').innerHTML = "";
-        document.getElementById('setupSection').classList.remove('d-none');
-        document.getElementById('scannerSection').classList.add('d-none');
-        document.getElementById('notifManual').classList.add('d-none');
+        resetHalamanMulai();
       });
     } else {
-      document.getElementById('reader').innerHTML = "";
-      document.getElementById('setupSection').classList.remove('d-none');
-      document.getElementById('scannerSection').classList.add('d-none');
-      document.getElementById('notifManual').classList.add('d-none');
+      resetHalamanMulai();
     }
+  }
+
+  function resetHalamanMulai() {
+    document.getElementById('reader').innerHTML = "";
+    document.getElementById('setupSection').classList.remove('d-none');
+    document.getElementById('scannerSection').classList.add('d-none');
+    document.getElementById('notifManual').classList.add('d-none');
   }
 
   function kirimDataAbsen(nimMhs, isFromCamera) {
@@ -327,13 +328,12 @@
           }
         }
 
-        // REFRESH KAMERA OTOMATIS JEDA 2 DETIK
         if(isFromCamera) {
           setTimeout(() => {
             document.getElementById('reader').innerHTML = ""; 
             startScanner(); 
             isProcessing = false;
-          }, 2000); // Kunci 2 detik sesuai modifikasi sebelumnya
+          }, 2000); 
         } else {
           isProcessing = false;
         }
