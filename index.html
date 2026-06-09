@@ -7,6 +7,8 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { background-color: #f8f9fa; }
+    
+    /* Wadah Utama Kamera */
     #reader { 
       width: 100%; 
       max-width: 450px; 
@@ -15,21 +17,40 @@
       padding: 10px;
       border-radius: 10px;
       background-color: #ffffff;
-      min-height: 300px;
-      position: relative;
-      transition: background-color 0.3s ease;
+      min-height: 320px;
+      position: relative; /* Menjadi acuan posisi overlay */
       overflow: hidden;
     }
-    .scan-success-flash {
-      background-color: #d1e7dd !important;
-      border-color: #198754 !important;
+
+    /* Lapisan Overlay yang MEMBlOKIR & MENUTUPI KAMERA SECARA PENUH */
+    .scanner-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999; /* Angka tinggi agar mutlak berada di paling depan */
+      padding: 20px;
+      text-align: center;
     }
-    .scanner-overlay-msg {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      font-size: 1.25rem; font-weight: bold; width: 90%; text-align: center; z-index: 100;
+    
+    /* Warna latar overlay berdasarkan status */
+    .bg-proses { background-color: rgba(255, 255, 255, 0.95); color: #0d6efd; }
+    .bg-sukses { background-color: #d1e7dd; color: #0f5132; }
+    .bg-gagal { background-color: #f8d7da; color: #842029; }
+
+    .scanner-overlay p {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-top: 10px;
+      line-height: 1.4;
     }
-    /* Menyembunyikan tombol log bawaan library yang mengganggu */
-    #reader video { width: 100% !important; border-radius: 8px; }
+
+    #reader video { width: 100% !important; border-radius: 8px; object-fit: cover; }
   </style>
 </head>
 <body>
@@ -64,7 +85,7 @@
       
       <div id="reader"></div>
       
-      <div id="notif" class="alert d-none mt-3"></div>
+      <div id="notifManual" class="alert d-none mt-3"></div>
       
       <div class="input-group mb-3 mt-4">
         <input type="text" id="manualNim" class="form-control" placeholder="Input NIM manual jika QR rusak">
@@ -81,7 +102,7 @@
 <script>
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwM0RJ6qvs-bAKx9FNtOP96sT6RB8ym8Hglq-wJhPLbtted66dvgcUhe1j-IRWbnopt/exec"; 
 
-  let html5Qrcode; // Menggunakan objek Lensa Murni murni tanpa UI template bawaan
+  let html5Qrcode; 
   let isProcessing = false;
 
   window.onload = function() {
@@ -113,19 +134,13 @@
   }
 
   function startScanner() {
-    // Inisialisasi menggunakan "Html5Qrcode" (bukan Html5QrcodeScanner) agar kontrol start/stop 100% mutlak di tangan kita
     html5Qrcode = new Html5Qrcode("reader");
-    
     html5Qrcode.start(
-      { facingMode: "environment" }, // Menggunakan kamera belakang otomatis
-      {
-        fps: 15,
-        qrbox: { width: 250, height: 250 }
-      },
+      { facingMode: "environment" }, 
+      { fps: 15, qrbox: { width: 250, height: 250 } },
       onScanSuccess,
       onScanFailure
     ).catch(err => {
-      // Fallback jika mode environment gagal, coba buka kamera apa saja yang tersedia
       html5Qrcode.start({ facingMode: "user" }, { fps: 15, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure)
       .catch(e => alert("Gagal mengakses kamera: " + e.message));
     });
@@ -144,68 +159,76 @@
   function onScanSuccess(decodedText, decodedResult) {
     if(decodedText && !isProcessing) {
       isProcessing = true;
-      
-      const readerDiv = document.getElementById('reader');
-      readerDiv.classList.add('scan-success-flash');
-      
       let nimMhs = decodedText.trim();
       
-      // HENTIKAN KAMERA SEGERA SECARA TOTAL
+      // Sembunyikan notif manual jika sebelumnya ada
+      document.getElementById('notifManual').classList.add('d-none');
+
+      // TAMPILKAN OVERLAY MEMPROSES (Kamera langsung tertutup total oleh teks & spinner loader)
+      const readerDiv = document.getElementById('reader');
+      readerDiv.innerHTML += `
+        <div id="cameraOverlay" class="scanner-overlay bg-proses">
+          <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+          <p>Sedang Memproses...<br><span class="text-muted" style="font-size:0.9rem;">NIM: ${nimMhs}</span></p>
+        </div>
+      `;
+      
+      // Hentikan sensor kamera di background agar hemat baterai/resource
       if(html5Qrcode && html5Qrcode.isScanning) {
         html5Qrcode.stop().then(() => {
-          readerDiv.innerHTML = `<div class="scanner-overlay-msg text-primary"><div class="spinner-border text-primary mb-2" role="status"></div><br>Menghubungkan ke Sheets...<br>NIM: ${nimMhs}</div>`;
-          kirimDataAbsen(nimMhs, true);
+          kirimDataAbsen(nimMhs, true); // true = Lewat Kamera
         }).catch(err => {
-          console.error("Gagal stop kamera:", err);
-          kirimDataAbsen(nimMhs, false);
+          kirimDataAbsen(nimMhs, true);
         });
       } else {
-        kirimDataAbsen(nimMhs, false);
+        kirimDataAbsen(nimMhs, true);
       }
     }
   }
 
   function onScanFailure(error) {
-    // Frame pencarian berjalan terus
-  }
-
-  function unlockSetting() {
-    if(html5Qrcode && html5Qrcode.isScanning) {
-      html5Qrcode.stop().then(() => {
-        resetReaderBox();
-        document.getElementById('setupSection').classList.remove('d-none');
-        document.getElementById('scannerSection').classList.add('d-none');
-      });
-    } else {
-      resetReaderBox();
-      document.getElementById('setupSection').classList.remove('d-none');
-      document.getElementById('scannerSection').classList.add('d-none');
-    }
+    // Membiarkan frame mencari QR terus
   }
 
   function inputManual() {
     let nim = document.getElementById('manualNim').value.trim();
     if(nim === "") { alert("Isi NIM terlebih dahulu!"); return; }
-    kirimDataAbsen(nim, false);
+    
+    // Kirim data dengan parameter isFromCamera = false
+    kirimDataAbsen(nim, false); 
     document.getElementById('manualNim').value = "";
   }
 
-  function resetReaderBox() {
-    const readerDiv = document.getElementById('reader');
-    readerDiv.className = ""; 
-    readerDiv.innerHTML = ""; 
+  function unlockSetting() {
+    if(html5Qrcode && html5Qrcode.isScanning) {
+      html5Qrcode.stop().then(() => {
+        document.getElementById('reader').innerHTML = "";
+        document.getElementById('setupSection').classList.remove('d-none');
+        document.getElementById('scannerSection').classList.add('d-none');
+        document.getElementById('notifManual').classList.add('d-none');
+      });
+    } else {
+      document.getElementById('reader').innerHTML = "";
+      document.getElementById('setupSection').classList.remove('d-none');
+      document.getElementById('scannerSection').classList.add('d-none');
+      document.getElementById('notifManual').classList.add('d-none');
+    }
   }
 
   function kirimDataAbsen(nimMhs, isFromCamera) {
     let labVal = document.getElementById('lab').value;
     let kepVal = document.getElementById('keperluan').value;
     let deskVal = document.getElementById('deskripsi').value;
-    let notifDiv = document.getElementById('notif');
-    const readerDiv = document.getElementById('reader');
     
-    notifDiv.className = "alert alert-warning";
-    notifDiv.innerText = "Sedang memproses data NIM: " + nimMhs + "...";
-    notifDiv.classList.remove('d-none');
+    let notifManualDiv = document.getElementById('notifManual');
+    let overlayDiv = document.getElementById('cameraOverlay');
+
+    // JIKA DARI MANUAL: Tampilkan teks loading di lokasi bawah biasa
+    if (!isFromCamera) {
+      notifManualDiv.className = "alert alert-warning";
+      notifManualDiv.innerText = "Sedang memproses input manual NIM: " + nimMhs + "...";
+      notifManualDiv.classList.remove('d-none');
+    }
 
     const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(labVal)}&keperluan=${encodeURIComponent(kepVal)}&catatan=${encodeURIComponent(deskVal)}`;
 
@@ -213,34 +236,57 @@
       .then(response => response.json())
       .then(respon => {
         if(respon.status === "success") {
-          notifDiv.className = "alert alert-success";
           if (navigator.vibrate) { navigator.vibrate(200); }
-          
-          if(isFromCamera) {
-            readerDiv.innerHTML = `<div class="scanner-overlay-msg text-success"><span style="font-size: 3rem;">✅</span><br><span style="font-size: 1.15rem;">${respon.pesan}</span></div>`;
+
+          if (isFromCamera && overlayDiv) {
+            // JIKA KAMERA: Ubah isi overlay menjadi warna HIJAU SUKSES PENUH di dalam kotak
+            overlayDiv.className = "scanner-overlay bg-sukses";
+            overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">✅</span><p>${respon.pesan}</p>`;
+          } else {
+            // JIKA MANUAL: Tampilkan sukses di bawah biasa
+            notifManualDiv.className = "alert alert-success";
+            notifManualDiv.innerText = respon.pesan;
           }
         } else {
-          notifDiv.className = "alert alert-danger";
-          if(isFromCamera) {
-            readerDiv.innerHTML = `<div class="scanner-overlay-msg text-danger"><span style="font-size: 3rem;">❌</span><br>Gagal: ${respon.pesan}</div>`;
+          if (isFromCamera && overlayDiv) {
+            // JIKA KAMERA: Ubah isi overlay menjadi MERAH GAGAL PENUH di dalam kotak
+            overlayDiv.className = "scanner-overlay bg-gagal";
+            overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">❌</span><p>Gagal: ${respon.pesan}</p>`;
+          } else {
+            // JIKA MANUAL: Tampilkan gagal di bawah biasa
+            notifManualDiv.className = "alert alert-danger";
+            notifManualDiv.innerText = respon.pesan;
           }
         }
-        notifDiv.innerText = respon.pesan;
 
-        // JEDA REFRESH: Tampilkan status sukses besar selama 3 detik, lalu kamera menyala lagi otomatis
+        // REFRESH KAMERA AUTOMATIC (Khusus Pemindaian Kamera)
         if(isFromCamera) {
           setTimeout(() => {
-            resetReaderBox();
-            startScanner();
+            document.getElementById('reader').innerHTML = ""; // Bersihkan isi kotak overlay
+            startScanner(); // Hidupkan ulang sensor kamera
             isProcessing = false;
-          }, 3000);
+          }, 3500); // Teks berhasil menetap selama 3,5 detik agar terbaca jelas
         } else {
           isProcessing = false;
         }
       })
       .catch(err => {
         console.error(err);
-        notifDiv.className = "alert alert-danger";
-        notifDiv.innerText = "Gagal terhubung ke server Google Sheets.";
-        
-        if
+        if (isFromCamera && overlayDiv) {
+          overlayDiv.className = "scanner-overlay bg-gagal";
+          overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">❌</span><p>Koneksi ke Google Sheets Terputus!</p>`;
+          setTimeout(() => {
+            document.getElementById('reader').innerHTML = "";
+            startScanner();
+            isProcessing = false;
+          }, 3500);
+        } else {
+          notifManualDiv.className = "alert alert-danger";
+          notifManualDiv.innerText = "Gagal terhubung ke server Google Sheets.";
+          isProcessing = false;
+        }
+      });
+  }
+</script>
+</body>
+</html>
