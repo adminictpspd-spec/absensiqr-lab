@@ -15,32 +15,21 @@
       padding: 10px;
       border-radius: 10px;
       background-color: #ffffff;
-      min-height: 250px;
+      min-height: 300px;
       position: relative;
       transition: background-color 0.3s ease;
+      overflow: hidden;
     }
-    /* Efek visual ketika QR sukses ter-scan */
     .scan-success-flash {
       background-color: #d1e7dd !important;
       border-color: #198754 !important;
     }
-    #reader button {
-      display: inline-block; font-weight: 400; text-align: center; white-space: nowrap; vertical-align: middle;
-      user-select: none; border: 1px solid transparent; padding: .4rem .8rem; font-size: 1rem; line-height: 1.5;
-      border-radius: .25rem; color: #fff; background-color: #0d6efd; border-color: #0d6efd; margin-top: 15px; margin-bottom: 15px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    #reader button:hover { background-color: #0b5ed7; }
-    #reader select {
-      display: inline-block; padding: .375rem 2.25rem .375rem .75rem; font-size: 1rem; font-weight: 400;
-      line-height: 1.5; color: #212529; background-color: #fff; border: 1px solid #ced4da; border-radius: .25rem;
-      margin: 10px auto; max-width: 90%;
-    }
-    /* Style untuk pesan status besar di dalam kotak scanner */
     .scanner-overlay-msg {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      font-size: 1.25rem; font-weight: bold; width: 90%; text-align: center; z-index: 10;
+      font-size: 1.25rem; font-weight: bold; width: 90%; text-align: center; z-index: 100;
     }
+    /* Menyembunyikan tombol log bawaan library yang mengganggu */
+    #reader video { width: 100% !important; border-radius: 8px; }
   </style>
 </head>
 <body>
@@ -71,7 +60,7 @@
   <div class="card shadow-sm d-none" id="scannerSection">
     <div class="card-header bg-dark text-white"><h5 class="mb-0">2. Area Scan QR Code</h5></div>
     <div class="card-body text-center">
-      <div class="alert alert-info py-2 mb-3">Sistem Terkunci. Silakan klik tombol biru di bawah untuk mengizinkan kamera.</div>
+      <div class="alert alert-info py-2 mb-3">Arahkan QR Code Anda ke dalam kotak kamera di bawah.</div>
       
       <div id="reader"></div>
       
@@ -92,7 +81,7 @@
 <script>
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwM0RJ6qvs-bAKx9FNtOP96sT6RB8ym8Hglq-wJhPLbtted66dvgcUhe1j-IRWbnopt/exec"; 
 
-  let html5QrcodeScanner;
+  let html5Qrcode; // Menggunakan objek Lensa Murni murni tanpa UI template bawaan
   let isProcessing = false;
 
   window.onload = function() {
@@ -124,21 +113,22 @@
   }
 
   function startScanner() {
-    try {
-      html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader", 
-        { 
-          fps: 15, 
-          qrbox: { width: 250, height: 250 },
-          rememberLastUsedCamera: true,
-          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-        },
-        false
-      );
-      html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-    } catch (err) {
-      alert("Gagal memuat komponen scanner: " + err.message);
-    }
+    // Inisialisasi menggunakan "Html5Qrcode" (bukan Html5QrcodeScanner) agar kontrol start/stop 100% mutlak di tangan kita
+    html5Qrcode = new Html5Qrcode("reader");
+    
+    html5Qrcode.start(
+      { facingMode: "environment" }, // Menggunakan kamera belakang otomatis
+      {
+        fps: 15,
+        qrbox: { width: 250, height: 250 }
+      },
+      onScanSuccess,
+      onScanFailure
+    ).catch(err => {
+      // Fallback jika mode environment gagal, coba buka kamera apa saja yang tersedia
+      html5Qrcode.start({ facingMode: "user" }, { fps: 15, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure)
+      .catch(e => alert("Gagal mengakses kamera: " + e.message));
+    });
   }
 
   function lockSetting() {
@@ -155,19 +145,18 @@
     if(decodedText && !isProcessing) {
       isProcessing = true;
       
-      // 1. Berikan efek flash hijau pada kotak scanner
       const readerDiv = document.getElementById('reader');
       readerDiv.classList.add('scan-success-flash');
       
-      // Get data input
       let nimMhs = decodedText.trim();
       
-      // 2. Matikan kamera sementara agar layar freeze & memunculkan teks loading besar
-      if(html5QrcodeScanner) {
-        html5QrcodeScanner.clear().then(() => {
-          readerDiv.innerHTML = `<div class="scanner-overlay-msg text-primary"><div class="spinner-border text-primary mb-2" role="status"></div><br>Menyimpan NIM: ${nimMhs}...</div>`;
-          kirimDataAbsen(nimMhs, true); // true menandakan input berasal dari kamera
+      // HENTIKAN KAMERA SEGERA SECARA TOTAL
+      if(html5Qrcode && html5Qrcode.isScanning) {
+        html5Qrcode.stop().then(() => {
+          readerDiv.innerHTML = `<div class="scanner-overlay-msg text-primary"><div class="spinner-border text-primary mb-2" role="status"></div><br>Menghubungkan ke Sheets...<br>NIM: ${nimMhs}</div>`;
+          kirimDataAbsen(nimMhs, true);
         }).catch(err => {
+          console.error("Gagal stop kamera:", err);
           kirimDataAbsen(nimMhs, false);
         });
       } else {
@@ -177,27 +166,27 @@
   }
 
   function onScanFailure(error) {
-    // Membiarkan pencarian frame berjalan terus
+    // Frame pencarian berjalan terus
   }
 
   function unlockSetting() {
-    if(html5QrcodeScanner) {
-      html5QrcodeScanner.clear().then(() => {
+    if(html5Qrcode && html5Qrcode.isScanning) {
+      html5Qrcode.stop().then(() => {
         resetReaderBox();
         document.getElementById('setupSection').classList.remove('d-none');
         document.getElementById('scannerSection').classList.add('d-none');
-      }).catch(err => {
-        resetReaderBox();
-        document.getElementById('setupSection').classList.remove('0-none');
-        document.getElementById('scannerSection').classList.add('d-none');
       });
+    } else {
+      resetReaderBox();
+      document.getElementById('setupSection').classList.remove('d-none');
+      document.getElementById('scannerSection').classList.add('d-none');
     }
   }
 
   function inputManual() {
     let nim = document.getElementById('manualNim').value.trim();
     if(nim === "") { alert("Isi NIM terlebih dahulu!"); return; }
-    kirimDataAbsen(nim, false); // false karena input manual, tidak perlu mematikan kamera
+    kirimDataAbsen(nim, false);
     document.getElementById('manualNim').value = "";
   }
 
@@ -227,25 +216,24 @@
           notifDiv.className = "alert alert-success";
           if (navigator.vibrate) { navigator.vibrate(200); }
           
-          // Jika dari kamera, tampilkan status sukses BESAR di dalam kotak selama 2.5 detik
           if(isFromCamera) {
-            readerDiv.innerHTML = `<div class="scanner-overlay-msg text-success"><span style="font-size: 2.5rem;">✅</span><br>${respon.pesan}</div>`;
+            readerDiv.innerHTML = `<div class="scanner-overlay-msg text-success"><span style="font-size: 3rem;">✅</span><br><span style="font-size: 1.15rem;">${respon.pesan}</span></div>`;
           }
         } else {
           notifDiv.className = "alert alert-danger";
           if(isFromCamera) {
-            readerDiv.innerHTML = `<div class="scanner-overlay-msg text-danger"><span style="font-size: 2.5rem;">❌</span><br>Gagal: ${respon.pesan}</div>`;
+            readerDiv.innerHTML = `<div class="scanner-overlay-msg text-danger"><span style="font-size: 3rem;">❌</span><br>Gagal: ${respon.pesan}</div>`;
           }
         }
         notifDiv.innerText = respon.pesan;
 
-        // JEDA REFRESH: Setelah 2.5 detik, bersihkan layar dan nyalakan kembali kamera otomatis
+        // JEDA REFRESH: Tampilkan status sukses besar selama 3 detik, lalu kamera menyala lagi otomatis
         if(isFromCamera) {
           setTimeout(() => {
             resetReaderBox();
             startScanner();
             isProcessing = false;
-          }, 2500);
+          }, 3000);
         } else {
           isProcessing = false;
         }
@@ -255,18 +243,4 @@
         notifDiv.className = "alert alert-danger";
         notifDiv.innerText = "Gagal terhubung ke server Google Sheets.";
         
-        if(isFromCamera) {
-          readerDiv.innerHTML = `<div class="scanner-overlay-msg text-danger">❌<br>Gagal terhubung ke server.</div>`;
-          setTimeout(() => {
-            resetReaderBox();
-            startScanner();
-            isProcessing = false;
-          }, 2500);
-        } else {
-          isProcessing = false;
-        }
-      });
-  }
-</script>
-</body>
-</html>
+        if
