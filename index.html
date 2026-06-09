@@ -6,7 +6,18 @@
   <title>Sistem Absensi QR Laboratorium</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background-color: #f8f9fa; }
+    /* Mengatur halaman agar footer selalu berada di bagian bawah */
+    html, body {
+      height: 100%;
+    }
+    body { 
+      background-color: #f8f9fa; 
+      display: flex;
+      flex-direction: column;
+    }
+    .content-wrapper {
+      flex: 1 0 auto;
+    }
 
     /* Kop Judul Institusi */
     .header-institusi {
@@ -96,90 +107,132 @@
       text-align: center;
       padding: 6px 4px;
     }
+
+    /* Gaya khusus teks panduan pengisian catatan */
+    .petunjuk-catatan {
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    /* Footer Institusi */
+    footer {
+      flex-shrink: 0;
+      background-color: #ffffff;
+      border-top: 1px solid #dee2e6;
+      color: #6c757d;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 15px 0;
+      margin-top: 40px;
+    }
   </style>
 </head>
 <body>
-<div class="container py-3">
 
-  <div class="header-institusi">
-    <h2>Kunjungan Laboratorium</h2>
-    <h3>Program Studi Kedokteran Program Sarjana</h3>
-    <h4>Fakultas Kedokteran dan Ilmu Kesehatan | Universitas Lambung Mangkurat</h4>
-  </div>
+<div class="content-wrapper">
+  <div class="container py-3">
 
-  <div class="container py-2">
-    <div class="card shadow-sm mb-4" id="setupSection">
-      <div class="card-header bg-primary text-white"><h5 class="mb-0">1. Pengaturan Log Laboratorium</h5></div>
-      <div class="card-body">
-        <div class="mb-3">
-          <label class="form-label">Pilih Laboratorium</label>
-          <select id="lab" class="form-select">
-            <option value="">Memuat daftar lab...</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Pilih Keperluan</label>
-          <select id="keperluan" class="form-select">
-            <option value="">Memuat daftar keperluan...</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Deskripsi Tambahan / Catatan</label>
-          <textarea id="deskripsi" class="form-control" rows="2" placeholder="Catatan tambahan (opsional)..."></textarea>
-        </div>
-        <button type="button" class="btn btn-success w-100" onclick="lockSetting()">Kunci & Mulai Scan</button>
-      </div>
+    <div class="header-institusi">
+      <h2>Kunjungan Laboratorium</h2>
+      <h3>Program Studi Kedokteran Program Sarjana</h3>
+      <h4>Fakultas Kedokteran dan Ilmu Kesehatan | Universitas Lambung Mangkurat</h4>
     </div>
 
-    <div class="card shadow-sm d-none" id="scannerSection">
-      <div class="card-header bg-dark text-white"><h5 class="mb-0">2. Area Scan QR Code</h5></div>
-      <div class="card-body text-center shadow-sm">
-        
-        <div class="info-log-box border-start border-primary border-3">
+    <div class="container py-2">
+      <div class="card shadow-sm mb-4" id="setupSection">
+        <div class="card-header bg-primary text-white"><h5 class="mb-0">1. Pengaturan Log Laboratorium</h5></div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Pilih Laboratorium</label>
+            <select id="lab" class="form-select">
+              <option value="">Memuat daftar lab...</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Pilih Keperluan</label>
+            <select id="keperluan" class="form-select">
+              <option value="">Memuat daftar keperluan...</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Deskripsi Tambahan / Catatan</label>
+            <textarea id="deskripsi" class="form-control" rows="2" placeholder="Catatan tambahan (opsional)..."></textarea>
+          </div>
           
-          <div class="row align-items-center mb-2">
-            <div class="col-5 col-sm-4">
-              <span class="badge bg-primary">Nama Lab</span>
-            </div>
-            <div class="col-7 col-sm-8 text-start">
-              <strong id="displayLab" class="text-dark">-</strong>
-            </div>
-          </div>
-
-          <div class="row align-items-center mb-2">
-            <div class="col-5 col-sm-4">
-              <span class="badge bg-secondary">Keperluan</span>
-            </div>
-            <div class="col-7 col-sm-8 text-start">
-              <strong id="displayKeperluan" class="text-dark">-</strong>
+          <div class="alert alert-info border-0 shadow-sm mb-4 petunjuk-catatan">
+            <div class="d-flex">
+              <span class="me-2">💡</span>
+              <div>
+                <strong class="d-block mb-1 text-info-emphasis">Ketentuan Pengisian Catatan:</strong>
+                <ul class="margin-bottom-0 ps-3 mb-0">
+                  <li>Jika mengisi keperluan <strong>Skripsi</strong>, diharapkan diisi di catatan: <span class="fst-italic">Judul Skripsi</span></li>
+                  <li>Jika diisi <strong>Praktikum</strong>, diharapkan diisi: <span class="fst-italic">Nama Mata Kuliah</span></li>
+                  <li>Jika <strong>Penelitian</strong>, diharapkan diisi: <span class="fst-italic">Judul Penelitian / Dari Tim Siapa</span></li>
+                </ul>
+              </div>
             </div>
           </div>
 
-          <div class="row align-items-center" id="boxDisplayCatatan">
-            <div class="col-5 col-sm-4">
-              <span class="badge bg-dark">Catatan</span>
-            </div>
-            <div class="col-7 col-sm-8 text-start">
-              <span id="displayCatatan" class="text-muted fst-italic">-</span>
-            </div>
-          </div>
-
+          <button type="button" class="btn btn-success w-100 py-2 fw-semibold" onclick="lockSetting()">Kunci & Mulai Scan</button>
         </div>
-        
-        <div id="reader"></div>
-        
-        <div id="notifManual" class="alert d-none mt-3" style="max-width: 450px; margin: 15px auto 0 auto;"></div>
-        
-        <div class="input-group mb-3 mt-4" style="max-width: 450px; margin: 0 auto;">
-          <input type="text" id="manualNim" class="form-control" placeholder="Input NIM manual jika QR rusak">
-          <button class="btn btn-secondary" type="button" onclick="inputManual()">Submit Manual</button>
+      </div>
+
+      <div class="card shadow-sm d-none" id="scannerSection">
+        <div class="card-header bg-dark text-white"><h5 class="mb-0">2. Area Scan QR Code</h5></div>
+        <div class="card-body text-center shadow-sm">
+          
+          <div class="info-log-box border-start border-primary border-3">
+            
+            <div class="row align-items-center mb-2">
+              <div class="col-5 col-sm-4">
+                <span class="badge bg-primary">Nama Lab</span>
+              </div>
+              <div class="col-7 col-sm-8 text-start">
+                <strong id="displayLab" class="text-dark">-</strong>
+              </div>
+            </div>
+
+            <div class="row align-items-center mb-2">
+              <div class="col-5 col-sm-4">
+                <span class="badge bg-secondary">Keperluan</span>
+              </div>
+              <div class="col-7 col-sm-8 text-start">
+                <strong id="displayKeperluan" class="text-dark">-</strong>
+              </div>
+            </div>
+
+            <div class="row align-items-center" id="boxDisplayCatatan">
+              <div class="col-5 col-sm-4">
+                <span class="badge bg-dark">Catatan</span>
+              </div>
+              <div class="col-7 col-sm-8 text-start">
+                <span id="displayCatatan" class="text-muted fst-italic">-</span>
+              </div>
+            </div>
+
+          </div>
+          
+          <div id="reader"></div>
+          
+          <div id="notifManual" class="alert d-none mt-3" style="max-width: 450px; margin: 15px auto 0 auto;"></div>
+          
+          <div class="input-group mb-3 mt-4" style="max-width: 450px; margin: 0 auto;">
+            <input type="text" id="manualNim" class="form-control" placeholder="Input NIM manual jika QR rusak">
+            <button class="btn btn-secondary" type="button" onclick="inputManual()">Submit Manual</button>
+          </div>
+          
+          <button class="btn btn-warning btn-sm mt-2 mb-2" onclick="unlockSetting()">Ubah Pengaturan Awal</button>
         </div>
-        
-        <button class="btn btn-warning btn-sm mt-2" onclick="unlockSetting()">Ubah Pengaturan Awal</button>
       </div>
     </div>
   </div>
 </div>
+
+<footer>
+  <div class="container">
+    <span>Developed by <strong>Helmi F</strong> Using Gemini AI</span>
+  </div>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
