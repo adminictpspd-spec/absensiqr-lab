@@ -167,6 +167,11 @@
   let html5Qrcode; 
   let isProcessing = false;
 
+  // Variabel Global Aman untuk menampung data log terpilih
+  let akunLabTerkunci = "";
+  let keperluanTerkunci = "";
+  let catatanTerkunci = "";
+
   window.onload = function() {
     muatOpsiDariSheets();
   };
@@ -190,8 +195,8 @@
       })
       .catch(err => {
         console.error("Gagal sinkronisasi data:", err);
-        document.getElementById("lab").innerHTML = '<option value="LAB ANATOMI">LAB ANATOMI</option><option value="LAB FARMA">LAB FARMA</option>';
-        document.getElementById("keperluan").innerHTML = '<option value="PRAKTIKUM">PRAKTIKUM</option><option value="SKRIPSI">SKRIPSI</option>';
+        document.getElementById("lab").innerHTML = '<option value="">-- Pilih Laboratorium --</option><option value="LAB ANATOMI">LAB ANATOMI</option><option value="LAB FARMA">LAB FARMA</option>';
+        document.getElementById("keperluan").innerHTML = '<option value="">-- Pilih Keperluan --</option><option value="PRAKTIKUM">PRAKTIKUM</option><option value="SKRIPSI">SKRIPSI</option>';
       });
   }
 
@@ -218,16 +223,23 @@
       return;
     }
 
-    document.getElementById('displayLab').innerText = labVal;
-    document.getElementById('displayKeperluan').innerText = kepVal;
+    // Amankan data langsung ke dalam variabel global
+    akunLabTerkunci = labVal;
+    keperluanTerkunci = kepVal;
+    catatanTerkunci = deskVal === "" ? "-" : deskVal;
+
+    // Tampilkan data ke kotak rangkuman atas kamera
+    document.getElementById('displayLab').innerText = akunLabTerkunci;
+    document.getElementById('displayKeperluan').innerText = keperluanTerkunci;
     
     if(deskVal !== "") {
-      document.getElementById('displayCatatan').innerText = deskVal;
+      document.getElementById('displayCatatan').innerText = catatanTerkunci;
       document.getElementById('boxDisplayCatatan').classList.remove('d-none');
     } else {
       document.getElementById('boxDisplayCatatan').classList.add('d-none');
     }
 
+    // Pindah Halaman
     document.getElementById('setupSection').classList.add('d-none');
     document.getElementById('scannerSection').classList.remove('d-none');
     startScanner();
@@ -290,10 +302,6 @@
   }
 
   function kirimDataAbsen(nimMhs, isFromCamera) {
-    let labVal = document.getElementById('lab').value;
-    let kepVal = document.getElementById('keperluan').value;
-    let deskVal = document.getElementById('deskripsi').value;
-    
     let notifManualDiv = document.getElementById('notifManual');
     let overlayDiv = document.getElementById('cameraOverlay');
 
@@ -303,7 +311,8 @@
       notifManualDiv.classList.remove('d-none');
     }
 
-    const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(labVal)}&keperluan=${encodeURIComponent(kepVal)}&catatan=${encodeURIComponent(deskVal)}`;
+    // Menggunakan variabel global terkunci agar data dijamin terkirim akurat
+    const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(akunLabTerkunci)}&keperluan=${encodeURIComponent(keperluanTerkunci)}&catatan=${encodeURIComponent(catatanTerkunci)}`;
 
     fetch(urlKirim)
       .then(response => response.json())
