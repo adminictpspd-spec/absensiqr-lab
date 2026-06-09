@@ -18,11 +18,11 @@
       border-radius: 10px;
       background-color: #ffffff;
       min-height: 320px;
-      position: relative; /* Menjadi acuan posisi overlay */
+      position: relative; 
       overflow: hidden;
     }
 
-    /* Lapisan Overlay yang MEMBlOKIR & MENUTUPI KAMERA SECARA PENUH */
+    /* Lapisan Overlay yang Memblokir Kamera */
     .scanner-overlay {
       position: absolute;
       top: 0;
@@ -33,12 +33,11 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 9999; /* Angka tinggi agar mutlak berada di paling depan */
+      z-index: 9999; 
       padding: 20px;
       text-align: center;
     }
     
-    /* Warna latar overlay berdasarkan status */
     .bg-proses { background-color: rgba(255, 255, 255, 0.95); color: #0d6efd; }
     .bg-sukses { background-color: #d1e7dd; color: #0f5132; }
     .bg-gagal { background-color: #f8d7da; color: #842029; }
@@ -51,6 +50,17 @@
     }
 
     #reader video { width: 100% !important; border-radius: 8px; object-fit: cover; }
+    
+    /* Style komponen rangkuman info di atas kamera */
+    .info-log-box {
+      background-color: #e9ecef;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.95rem;
+      max-width: 450px;
+      margin: 0 auto 15px auto;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
@@ -81,7 +91,23 @@
   <div class="card shadow-sm d-none" id="scannerSection">
     <div class="card-header bg-dark text-white"><h5 class="mb-0">2. Area Scan QR Code</h5></div>
     <div class="card-body text-center">
-      <div class="alert alert-info py-2 mb-3">Arahkan QR Code Anda ke dalam kotak kamera di bawah.</div>
+      
+      <div class="info-log-box shadow-sm border-start border-primary border-3">
+        <div class="row g-2">
+          <div class="col-12">
+            <span class="badge bg-primary me-1">Lab</span> 
+            <strong id="displayLab">-</strong>
+          </div>
+          <div class="col-12">
+            <span class="badge bg-secondary me-1">Keperluan</span> 
+            <strong id="displayKeperluan">-</strong>
+          </div>
+          <div class="col-12" id="boxDisplayCatatan">
+            <span class="badge bg-dark me-1">Catatan</span> 
+            <span id="displayCatatan" class="text-muted italic">-</span>
+          </div>
+        </div>
+      </div>
       
       <div id="reader"></div>
       
@@ -147,10 +173,26 @@
   }
 
   function lockSetting() {
-    if(!document.getElementById('lab').value || !document.getElementById('keperluan').value) {
+    let labVal = document.getElementById('lab').value;
+    let kepVal = document.getElementById('keperluan').value;
+    let deskVal = document.getElementById('deskripsi').value.trim();
+
+    if(!labVal || !kepVal) {
       alert('Mohon pastikan Lab dan Keperluan sudah terpilih!');
       return;
     }
+
+    // 📌 TEMPELKAN TEKS PILIHAN KE BOX ATAS KAMERA SEBELUM PINDAH HALAMAN
+    document.getElementById('displayLab').innerText = labVal;
+    document.getElementById('displayKeperluan').innerText = kepVal;
+    
+    if(deskVal !== "") {
+      document.getElementById('displayCatatan').innerText = deskVal;
+      document.getElementById('boxDisplayCatatan').classList.remove('d-none');
+    } else {
+      document.getElementById('boxDisplayCatatan').classList.add('d-none'); // Sembunyikan baris catatan jika kosong
+    }
+
     document.getElementById('setupSection').classList.add('d-none');
     document.getElementById('scannerSection').classList.remove('d-none');
     startScanner();
@@ -161,10 +203,8 @@
       isProcessing = true;
       let nimMhs = decodedText.trim();
       
-      // Sembunyikan notif manual jika sebelumnya ada
       document.getElementById('notifManual').classList.add('d-none');
 
-      // TAMPILKAN OVERLAY MEMPROSES (Kamera langsung tertutup total oleh teks & spinner loader)
       const readerDiv = document.getElementById('reader');
       readerDiv.innerHTML += `
         <div id="cameraOverlay" class="scanner-overlay bg-proses">
@@ -173,10 +213,9 @@
         </div>
       `;
       
-      // Hentikan sensor kamera di background agar hemat baterai/resource
       if(html5Qrcode && html5Qrcode.isScanning) {
         html5Qrcode.stop().then(() => {
-          kirimDataAbsen(nimMhs, true); // true = Lewat Kamera
+          kirimDataAbsen(nimMhs, true); 
         }).catch(err => {
           kirimDataAbsen(nimMhs, true);
         });
@@ -194,7 +233,6 @@
     let nim = document.getElementById('manualNim').value.trim();
     if(nim === "") { alert("Isi NIM terlebih dahulu!"); return; }
     
-    // Kirim data dengan parameter isFromCamera = false
     kirimDataAbsen(nim, false); 
     document.getElementById('manualNim').value = "";
   }
@@ -223,7 +261,6 @@
     let notifManualDiv = document.getElementById('notifManual');
     let overlayDiv = document.getElementById('cameraOverlay');
 
-    // JIKA DARI MANUAL: Tampilkan teks loading di lokasi bawah biasa
     if (!isFromCamera) {
       notifManualDiv.className = "alert alert-warning";
       notifManualDiv.innerText = "Sedang memproses input manual NIM: " + nimMhs + "...";
@@ -239,33 +276,29 @@
           if (navigator.vibrate) { navigator.vibrate(200); }
 
           if (isFromCamera && overlayDiv) {
-            // JIKA KAMERA: Ubah isi overlay menjadi warna HIJAU SUKSES PENUH di dalam kotak
             overlayDiv.className = "scanner-overlay bg-sukses";
             overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">✅</span><p>${respon.pesan}</p>`;
           } else {
-            // JIKA MANUAL: Tampilkan sukses di bawah biasa
             notifManualDiv.className = "alert alert-success";
             notifManualDiv.innerText = respon.pesan;
           }
         } else {
           if (isFromCamera && overlayDiv) {
-            // JIKA KAMERA: Ubah isi overlay menjadi MERAH GAGAL PENUH di dalam kotak
             overlayDiv.className = "scanner-overlay bg-gagal";
             overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">❌</span><p>Gagal: ${respon.pesan}</p>`;
           } else {
-            // JIKA MANUAL: Tampilkan gagal di bawah biasa
             notifManualDiv.className = "alert alert-danger";
             notifManualDiv.innerText = respon.pesan;
           }
         }
 
-        // REFRESH KAMERA AUTOMATIC (Khusus Pemindaian Kamera)
+        // REFRESH KAMERA OTOMATIS JEDA 2 DETIK
         if(isFromCamera) {
           setTimeout(() => {
-            document.getElementById('reader').innerHTML = ""; // Bersihkan isi kotak overlay
-            startScanner(); // Hidupkan ulang sensor kamera
+            document.getElementById('reader').innerHTML = ""; 
+            startScanner(); 
             isProcessing = false;
-          }, 2000); // Teks berhasil menetap selama 3,5 detik agar terbaca jelas
+          }, 2000); // Kunci 2 detik sesuai modifikasi sebelumnya
         } else {
           isProcessing = false;
         }
