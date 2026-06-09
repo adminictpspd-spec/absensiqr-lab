@@ -3,38 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistem Absensi QR Laboratorium FKIK ULM</title>
+  <title>Sistem Absensi QR Laboratorium</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { background-color: #f8f9fa; }
     
-    /* Kop Judul Institusi */
-    .header-institusi {
-      text-align: center;
-      padding-top: 15px;
-      padding-bottom: 15px;
-      margin-bottom: 25px;
-      border-bottom: 3px double #0d6efd;
-    }
-    .header-institusi h2 {
-      font-size: 1.4rem;
-      font-weight: bold;
-      color: #0b3994;
-      margin-bottom: 2px;
-      text-transform: uppercase;
-    }
-    .header-institusi h3 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 2px;
-    }
-    .header-institusi h4 {
-      font-size: 0.95rem;
-      color: #555;
-      margin-bottom: 0;
-    }
-
     /* Wadah Utama Kamera */
     #reader { 
       width: 100%; 
@@ -77,30 +50,34 @@
     }
 
     #reader video { width: 100% !important; border-radius: 8px; object-fit: cover; }
+    
+    /* Style komponen rangkuman info di atas kamera */
+    .info-log-box {
+      background-color: #e9ecef;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.95rem;
+      max-width: 450px;
+      margin: 0 auto 15px auto;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
-<div class="container py-3">
-
-  <div class="header-institusi">
-    <h2>Kunjungan Laboratorium</h2>
-    <h3>Program Studi Kedokteran Program Sarjana</h3>
-    <h4>Fakultas Kedokteran dan Ilmu Kesehatan | Universitas Lambung Mangkurat</h4>
-  </div>
-  
+<div class="container py-4">
   <div class="card shadow-sm mb-4" id="setupSection">
     <div class="card-header bg-primary text-white"><h5 class="mb-0">1. Pengaturan Log Laboratorium</h5></div>
     <div class="card-body">
       <div class="mb-3">
         <label class="form-label">Pilih Laboratorium</label>
         <select id="lab" class="form-select">
-          <option value="">-- Memuat Pilihan... --</option>
+          <option value="">Memuat daftar lab...</option>
         </select>
       </div>
       <div class="mb-3">
         <label class="form-label">Pilih Keperluan</label>
         <select id="keperluan" class="form-select">
-          <option value="">-- Memuat Pilihan... --</option>
+          <option value="">Memuat daftar keperluan...</option>
         </select>
       </div>
       <div class="mb-3">
@@ -111,40 +88,37 @@
     </div>
   </div>
 
-  <div class="card border-primary shadow-sm mb-3 d-none" id="kotakRangkumanSesi" style="max-width: 450px; margin: 0 auto;">
-    <div class="card-header bg-light text-primary fw-bold py-2" style="font-size: 0.9rem;">
-      📍 SESI ABSENSI AKTIF DIKUNCI
-    </div>
-    <div class="card-body py-3 text-start">
-      <div class="mb-2">
-        <small class="text-muted d-block font-monospace" style="font-size: 0.75rem;">LABORATORIUM</small>
-        <span id="displayLab" class="fw-bold text-dark" style="font-size: 1.1rem;">-</span>
-      </div>
-      <div class="mb-2">
-        <small class="text-muted d-block font-monospace" style="font-size: 0.75rem;">KEPERLUAN LOG</small>
-        <span id="displayKeperluan" class="fw-bold text-dark" style="font-size: 1.1rem;">-</span>
-      </div>
-      <div>
-        <small class="text-muted d-block font-monospace" style="font-size: 0.75rem;">DESKRIPSI / CATATAN</small>
-        <span id="displayCatatan" class="text-secondary fst-italic" style="font-size: 0.95rem;">-</span>
-      </div>
-    </div>
-  </div>
-
   <div class="card shadow-sm d-none" id="scannerSection">
     <div class="card-header bg-dark text-white"><h5 class="mb-0">2. Area Scan QR Code</h5></div>
-    <div class="card-body text-center py-3">
+    <div class="card-body text-center">
+      
+      <div class="info-log-box shadow-sm border-start border-primary border-3">
+        <div class="row g-2">
+          <div class="col-12">
+            <span class="badge bg-primary me-1">Lab</span> 
+            <strong id="displayLab">-</strong>
+          </div>
+          <div class="col-12">
+            <span class="badge bg-secondary me-1">Keperluan</span> 
+            <strong id="displayKeperluan">-</strong>
+          </div>
+          <div class="col-12" id="boxDisplayCatatan">
+            <span class="badge bg-dark me-1">Catatan</span> 
+            <span id="displayCatatan" class="text-muted italic">-</span>
+          </div>
+        </div>
+      </div>
       
       <div id="reader"></div>
       
       <div id="notifManual" class="alert d-none mt-3"></div>
       
-      <div class="input-group mb-3 mt-4" style="max-width: 450px; margin: 0 auto;">
+      <div class="input-group mb-3 mt-4">
         <input type="text" id="manualNim" class="form-control" placeholder="Input NIM manual jika QR rusak">
         <button class="btn btn-secondary" type="button" onclick="inputManual()">Submit Manual</button>
       </div>
       
-      <button class="btn btn-warning btn-sm mt-2" onclick="unlockSetting()">Ubah Pengaturan Awal</button>
+      <button class="btn btn-warning btn-sm" onclick="unlockSetting()">Ubah Pengaturan Awal</button>
     </div>
   </div>
 </div>
@@ -157,11 +131,6 @@
   let html5Qrcode; 
   let isProcessing = false;
 
-  // Variabel Global Terkunci
-  let lockedLab = "";
-  let lockedKeperluan = "";
-  let lockedCatatan = "";
-
   window.onload = function() {
     muatOpsiDariSheets();
   };
@@ -173,37 +142,21 @@
         const selectLab = document.getElementById("lab");
         const selectKeperluan = document.getElementById("keperluan");
 
-        if (data.labs && data.labs.length > 0 && data.keperluans && data.keperluans.length > 0) {
-          selectLab.innerHTML = '<option value="">-- Pilih Laboratorium --</option>';
-          data.labs.forEach(l => { selectLab.innerHTML += `<option value="${l}">${l}</option>`; });
+        selectLab.innerHTML = '<option value="">-- Pilih Laboratorium --</option>';
+        selectKeperluan.innerHTML = '<option value="">-- Pilih Keperluan --</option>';
 
-          selectKeperluan.innerHTML = '<option value="">-- Pilih Keperluan --</option>';
+        if (data.labs && data.labs.length > 0) {
+          data.labs.forEach(l => { selectLab.innerHTML += `<option value="${l}">${l}</option>`; });
+        }
+        if (data.keperluans && data.keperluans.length > 0) {
           data.keperluans.forEach(k => { selectKeperluan.innerHTML += `<option value="${k}">${k}</option>`; });
-        } else {
-          gunakanOpsiLokal();
         }
       })
       .catch(err => {
-        console.warn("Gagal fetch, gunakan opsi lokal:", err);
-        gunakanOpsiLokal();
+        console.error("Gagal sinkronisasi data:", err);
+        document.getElementById("lab").innerHTML = '<option value="LAB ANATOMI">LAB ANATOMI</option><option value="LAB FARMA">LAB FARMA</option>';
+        document.getElementById("keperluan").innerHTML = '<option value="PRAKTIKUM">PRAKTIKUM</option><option value="SKRIPSI">SKRIPSI</option>';
       });
-  }
-
-  function gunakanOpsiLokal() {
-    const selectLab = document.getElementById("lab");
-    const selectKeperluan = document.getElementById("keperluan");
-
-    selectLab.innerHTML = `
-      <option value="">-- Pilih Laboratorium --</option>
-      <option value="LAB ANATOMI">LAB ANATOMI</option>
-      <option value="LAB FARMA">LAB FARMA</option>
-    `;
-    selectKeperluan.innerHTML = `
-      <option value="">-- Pilih Keperluan --</option>
-      <option value="SKRIPSI">SKRIPSI</option>
-      <option value="PRAKTIKUM">PRAKTIKUM</option>
-      <option value="LAINNYA">LAINNYA</option>
-    `;
   }
 
   function startScanner() {
@@ -220,36 +173,28 @@
   }
 
   function lockSetting() {
-    let labElement = document.getElementById('lab');
-    let keperluanElement = document.getElementById('keperluan');
-    let deskElement = document.getElementById('deskripsi');
-
-    let labVal = labElement.value;
-    let kepVal = keperluanElement.value;
-    let deskVal = deskElement.value.trim();
+    let labVal = document.getElementById('lab').value;
+    let kepVal = document.getElementById('keperluan').value;
+    let deskVal = document.getElementById('deskripsi').value.trim();
 
     if(!labVal || !kepVal) {
       alert('Mohon pastikan Lab dan Keperluan sudah terpilih!');
       return;
     }
 
-    // Amankan data ke variabel global
-    lockedLab = labVal;
-    lockedKeperluan = kepVal;
-    lockedCatatan = deskVal === "" ? "-" : deskVal;
+    // 📌 TEMPELKAN TEKS PILIHAN KE BOX ATAS KAMERA SEBELUM PINDAH HALAMAN
+    document.getElementById('displayLab').innerText = labVal;
+    document.getElementById('displayKeperluan').innerText = kepVal;
+    
+    if(deskVal !== "") {
+      document.getElementById('displayCatatan').innerText = deskVal;
+      document.getElementById('boxDisplayCatatan').classList.remove('d-none');
+    } else {
+      document.getElementById('boxDisplayCatatan').classList.add('d-none'); // Sembunyikan baris catatan jika kosong
+    }
 
-    // Suntikkan teks ke dalam kotak khusus baru
-    document.getElementById('displayLab').textContent = lockedLab;
-    document.getElementById('displayKeperluan').textContent = lockedKeperluan;
-    document.getElementById('displayCatatan').textContent = lockedCatatan;
-
-    // Sembunyikan form setup awal
     document.getElementById('setupSection').classList.add('d-none');
-    
-    // TAMPILKAN KOTAK KHUSUS BARU & AREA KAMERA
-    document.getElementById('kotakRangkumanSesi').classList.remove('d-none');
     document.getElementById('scannerSection').classList.remove('d-none');
-    
     startScanner();
   }
 
@@ -295,24 +240,24 @@
   function unlockSetting() {
     if(html5Qrcode && html5Qrcode.isScanning) {
       html5Qrcode.stop().then(() => {
-        bukaKunciForm();
+        document.getElementById('reader').innerHTML = "";
+        document.getElementById('setupSection').classList.remove('d-none');
+        document.getElementById('scannerSection').classList.add('d-none');
+        document.getElementById('notifManual').classList.add('d-none');
       });
     } else {
-      bukaKunciForm();
+      document.getElementById('reader').innerHTML = "";
+      document.getElementById('setupSection').classList.remove('d-none');
+      document.getElementById('scannerSection').classList.add('d-none');
+      document.getElementById('notifManual').classList.add('d-none');
     }
   }
 
-  function bukaKunciForm() {
-    document.getElementById('reader').innerHTML = "";
-    document.getElementById('setupSection').classList.remove('d-none');
-    
-    // SEMBUNYIKAN KEMBALI KOTAK RANGKUMAN & AREA SCANNER
-    document.getElementById('kotakRangkumanSesi').classList.add('d-none');
-    document.getElementById('scannerSection').classList.add('d-none');
-    document.getElementById('notifManual').classList.add('d-none');
-  }
-
   function kirimDataAbsen(nimMhs, isFromCamera) {
+    let labVal = document.getElementById('lab').value;
+    let kepVal = document.getElementById('keperluan').value;
+    let deskVal = document.getElementById('deskripsi').value;
+    
     let notifManualDiv = document.getElementById('notifManual');
     let overlayDiv = document.getElementById('cameraOverlay');
 
@@ -322,7 +267,7 @@
       notifManualDiv.classList.remove('d-none');
     }
 
-    const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(lockedLab)}&keperluan=${encodeURIComponent(lockedKeperluan)}&catatan=${encodeURIComponent(lockedCatatan)}`;
+    const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(labVal)}&keperluan=${encodeURIComponent(kepVal)}&catatan=${encodeURIComponent(deskVal)}`;
 
     fetch(urlKirim)
       .then(response => response.json())
@@ -347,12 +292,13 @@
           }
         }
 
+        // REFRESH KAMERA OTOMATIS JEDA 2 DETIK
         if(isFromCamera) {
           setTimeout(() => {
             document.getElementById('reader').innerHTML = ""; 
             startScanner(); 
             isProcessing = false;
-          }, 2000); 
+          }, 2000); // Kunci 2 detik sesuai modifikasi sebelumnya
         } else {
           isProcessing = false;
         }
