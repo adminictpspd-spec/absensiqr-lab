@@ -50,23 +50,11 @@
     }
 
     #reader video { width: 100% !important; border-radius: 8px; object-fit: cover; }
-    
-    /* Style komponen rangkuman info di atas kamera - Diperketat visibilitasnya */
-    .info-log-box {
-      background-color: #f0f4f8 !important;
-      border-left: 5px solid #0d6efd !important;
-      border-radius: 8px;
-      padding: 15px;
-      font-size: 1rem;
-      max-width: 450px;
-      margin: 10px auto 20px auto;
-      text-align: left;
-      display: block !important; /* Memaksa box agar wajib tampil */
-    }
   </style>
 </head>
 <body>
 <div class="container py-4">
+  
   <div class="card shadow-sm mb-4" id="setupSection">
     <div class="card-header bg-primary text-white"><h5 class="mb-0">1. Pengaturan Log Laboratorium</h5></div>
     <div class="card-body">
@@ -90,35 +78,40 @@
     </div>
   </div>
 
+  <div class="card border-primary shadow-sm mb-3 d-none" id="kotakRangkumanSesi" style="max-width: 450px; margin: 0 auto;">
+    <div class="card-header bg-light text-primary fw-bold py-2" style="font-size: 0.9rem;">
+      📍 SESI ABSENSI AKTIF DIKUNCI
+    </div>
+    <div class="card-body py-3 text-start">
+      <div class="mb-2">
+        <small class="text-muted d-block font-monospace" style="font-size: 0.75rem;">LABORATORIUM</small>
+        <span id="displayLab" class="fw-bold text-dark" style="font-size: 1.1rem;">-</span>
+      </div>
+      <div class="mb-2">
+        <small class="text-muted d-block font-monospace" style="font-size: 0.75rem;">KEPERLUAN LOG</small>
+        <span id="displayKeperluan" class="fw-bold text-dark" style="font-size: 1.1rem;">-</span>
+      </div>
+      <div>
+        <small class="text-muted d-block font-monospace" style="font-size: 0.75rem;">DESKRIPSI / CATATAN</small>
+        <span id="displayCatatan" class="text-secondary fst-italic" style="font-size: 0.95rem;">-</span>
+      </div>
+    </div>
+  </div>
+
   <div class="card shadow-sm d-none" id="scannerSection">
     <div class="card-header bg-dark text-white"><h5 class="mb-0">2. Area Scan QR Code</h5></div>
-    <div class="card-body text-center">
-      
-      <div class="info-log-box shadow-sm">
-        <div class="mb-1">
-          <span class="badge bg-primary me-2" style="font-size: 0.85rem;">LABORATORIUM</span> 
-          <span id="displayLab" class="fw-bold text-dark">-</span>
-        </div>
-        <div class="mb-1">
-          <span class="badge bg-secondary me-2" style="font-size: 0.85rem;">KEPERLUAN</span> 
-          <span id="displayKeperluan" class="fw-bold text-dark">-</span>
-        </div>
-        <div id="boxDisplayCatatan">
-          <span class="badge bg-dark me-2" style="font-size: 0.85rem;">CATATAN</span> 
-          <span id="displayCatatan" class="text-muted fst-italic">-</span>
-        </div>
-      </div>
+    <div class="card-body text-center py-3">
       
       <div id="reader"></div>
       
       <div id="notifManual" class="alert d-none mt-3"></div>
       
-      <div class="input-group mb-3 mt-4">
+      <div class="input-group mb-3 mt-4" style="max-width: 450px; margin: 0 auto;">
         <input type="text" id="manualNim" class="form-control" placeholder="Input NIM manual jika QR rusak">
         <button class="btn btn-secondary" type="button" onclick="inputManual()">Submit Manual</button>
       </div>
       
-      <button class="btn btn-warning btn-sm" onclick="unlockSetting()">Ubah Pengaturan Awal</button>
+      <button class="btn btn-warning btn-sm mt-2" onclick="unlockSetting()">Ubah Pengaturan Awal</button>
     </div>
   </div>
 </div>
@@ -154,12 +147,11 @@
           selectKeperluan.innerHTML = '<option value="">-- Pilih Keperluan --</option>';
           data.keperluans.forEach(k => { selectKeperluan.innerHTML += `<option value="${k}">${k}</option>`; });
         } else {
-          // Jika data dari sheet kosong/tidak sesuai format, gunakan data lokal
           gunakanOpsiLokal();
         }
       })
       .catch(err => {
-        console.warn("Gagal fetch Apps Script, beralih ke opsi lokal baku:", err);
+        console.warn("Gagal fetch, gunakan opsi lokal:", err);
         gunakanOpsiLokal();
       });
   }
@@ -168,7 +160,6 @@
     const selectLab = document.getElementById("lab");
     const selectKeperluan = document.getElementById("keperluan");
 
-    // Diambil dari struktur tab sheet Anda (Data_Lab & Data_Keperluan)
     selectLab.innerHTML = `
       <option value="">-- Pilih Laboratorium --</option>
       <option value="LAB ANATOMI">LAB ANATOMI</option>
@@ -204,7 +195,7 @@
     let kepVal = keperluanElement.value;
     let deskVal = deskElement.value.trim();
 
-    if(!labVal || kepVal === "") {
+    if(!labVal || !kepVal) {
       alert('Mohon pastikan Lab dan Keperluan sudah terpilih!');
       return;
     }
@@ -214,13 +205,16 @@
     lockedKeperluan = kepVal;
     lockedCatatan = deskVal === "" ? "-" : deskVal;
 
-    // Suntikkan teks secara paksa langsung ke elemen HTML pendisplay
+    // Suntikkan teks ke dalam kotak khusus baru
     document.getElementById('displayLab').textContent = lockedLab;
     document.getElementById('displayKeperluan').textContent = lockedKeperluan;
     document.getElementById('displayCatatan').textContent = lockedCatatan;
 
-    // Sembunyikan form setup, tampilkan area kamera
+    // Sembunyikan form setup awal
     document.getElementById('setupSection').classList.add('d-none');
+    
+    // TAMPILKAN KOTAK KHUSUS BARU & AREA KAMERA
+    document.getElementById('kotakRangkumanSesi').classList.remove('d-none');
     document.getElementById('scannerSection').classList.remove('d-none');
     
     startScanner();
@@ -268,18 +262,21 @@
   function unlockSetting() {
     if(html5Qrcode && html5Qrcode.isScanning) {
       html5Qrcode.stop().then(() => {
-        document.getElementById('reader').innerHTML = "";
-        document.getElementById('setupSection').classList.remove('0');
-        document.getElementById('setupSection').classList.remove('d-none');
-        document.getElementById('scannerSection').classList.add('d-none');
-        document.getElementById('notifManual').classList.add('d-none');
+        bukaKunciForm();
       });
     } else {
-      document.getElementById('reader').innerHTML = "";
-      document.getElementById('setupSection').classList.remove('d-none');
-      document.getElementById('scannerSection').classList.add('d-none');
-      document.getElementById('notifManual').classList.add('d-none');
+      bukaKunciForm();
     }
+  }
+
+  function bukaKunciForm() {
+    document.getElementById('reader').innerHTML = "";
+    document.getElementById('setupSection').classList.remove('d-none');
+    
+    // SEMBUNYIKAN KEMBALI KOTAK RANGKUMAN & AREA SCANNER
+    document.getElementById('kotakRangkumanSesi').classList.add('d-none');
+    document.getElementById('scannerSection').classList.add('d-none');
+    document.getElementById('notifManual').classList.add('d-none');
   }
 
   function kirimDataAbsen(nimMhs, isFromCamera) {
