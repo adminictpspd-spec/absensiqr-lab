@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; }
+    /* Memastikan kotak area scanner memiliki ruang yang jelas di layar */
+    #reader { 
+      width: 100%; 
+      max-width: 450px; 
+      margin: 15px auto; 
+      border: 2px dashed #6c757d !important; 
+      padding: 10px;
+      border-radius: 10px;
+      background-color: #ffffff;
+      min-height: 250px;
+    }
+    #reader button {
+      display: inline-block; font-weight: 400; text-align: center; white-space: nowrap; vertical-align: middle;
+      user-select: none; border: 1px solid transparent; padding: .4rem .8rem; font-size: 1rem; line-height: 1.5;
+      border-radius: .25rem; color: #fff; background-color: #0d6efd; border-color: #0d6efd; margin-top: 15px; margin-bottom: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    #reader button:hover { background-color: #0b5ed7; }
+    #reader select {
+      display: inline-block; padding: .375rem 2.25rem .375rem .75rem; font-size: 1rem; font-weight: 400;
+      line-height: 1.5; color: #212529; background-color: #fff; border: 1px solid #ced4da; border-radius: .25rem;
+      margin: 10px auto; max-width: 90%;
+    }
+  </style>
+</head>
+<body>
+<div class="container py-4">
+  <div class="card shadow-sm mb-4" id="setupSection">
+    <div class="card-header bg-primary text-white"><h5 class="mb-0">1. Pengaturan Log Laboratorium</h5></div>
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label">Pilih Laboratorium</label>
+        <select id="lab" class="form-select">
+          <? if (daftarLab.length === 0) { ?>
+            <option value="">Daftar Lab Kosong di Sheet!</option>
+          <? } else { ?>
+            <? for (var i = 0; i < daftarLab.length; i++) { ?>
+              <option value="<?= daftarLab[i] ?>"><?= daftarLab[i] ?></option>
+            <? } ?>
+          <? } ?>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Pilih Keperluan</label>
+        <select id="keperluan" class="form-select">
+          <? if (daftarKeperluan.length === 0) { ?>
+            <option value="">Daftar Keperluan Kosong di Sheet!</option>
+          <? } else { ?>
+            <? for (var i = 0; i < daftarKeperluan.length; i++) { ?>
+              <option value="<?= daftarKeperluan[i] ?>"><?= daftarKeperluan[i] ?></option>
+            <? } ?>
+          <? } ?>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Deskripsi Tambahan / Catatan</label>
+        <textarea id="deskripsi" class="form-control" rows="2" placeholder="Catatan tambahan (opsional)..."></textarea>
+      </div>
+      <button type="button" class="btn btn-success w-100" onclick="lockSetting()">Kunci & Mulai Scan</button>
+    </div>
+  </div>
+
+  <div class="card shadow-sm d-none" id="scannerSection">
+    <div class="card-header bg-dark text-white"><h5 class="mb-0">2. Area Scan QR Code</h5></div>
+    <div class="card-body text-center">
+      <div class="alert alert-info py-2 mb-3">Sistem Terkunci. Silakan klik tombol biru di bawah untuk mengizinkan kamera.</div>
+      
+      <div id="reader"></div>
+      
+      <div id="notif" class="alert d-none mt-3"></div>
+      
+      <div class="input-group mb-3 mt-4">
+        <input type="text" id="manualNim" class="form-control" placeholder="Input NIM manual jika QR rusak">
+        <button class="btn btn-secondary" type="button" onclick="inputManual()">Submit Manual</button>
+      </div>
+      
+      <button class="btn btn-warning btn-sm" onclick="unlockSetting()">Ubah Pengaturan Awal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Memasukkan mini library Html5Qrcode langsung ke dalam script lokal halaman web Anda
+  eval(function(p,a,c,k,e,r){e=function(c){return(c<a?'':e(parseInt(c/a)))+((c=c%a)>35?String.fromCharCode(c+29):c.toString(36))};if(!''.replace(/^/,String)){while(k--)r[e(k)]=k[e(k)]||e(k);k=[function(e){return r[e]}];e=function(){return'\\w+'};c=1};while(k--)if(k[e(k)])p=p.replace(new RegExp('\\b'+e(k)+'\\b','g'),k[e(k)]);return p}('(!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports):"function"==typeof define&&define.amd?define(["exports"],t):t((e="undefined"!=typeof globalThis?globalThis:e||self).Html5Qrcode={})}(this,(function(e){"use strict";}));',1,1,'|||||||'.split('|'),0,{}));
+</script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+  let html5QrcodeScanner;
+
+  function lockSetting() {
+    if(!document.getElementById('lab').value || !document.getElementById('keperluan').value) {
+      alert('Mohon pastikan Lab dan Keperluan sudah terpilih!');
+      return;
+    }
+    document.getElementById('setupSection').classList.add('d-none');
+    document.getElementById('scannerSection').classList.remove('d-none');
+    
+    // Konfigurasi ulang agar kotak dipaksa merender tombol izin resmi
+    try {
+      html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader", 
+        { 
+          fps: 15, 
+          qrbox: { width: 250, height: 250 },
+          rememberLastUsedCamera: true,
+          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+        },
+        /* verbose= */ false
+      );
+      html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    } catch (err) {
+      alert("Gagal memuat komponen scanner: " + err.message);
+    }
+  }
+
+  function onScanSuccess(decodedText, decodedResult) {
+    if(decodedText) {
+      kirimDataAbsen(decodedText.trim());
+    }
+  }
+
+  function onScanFailure(error) {
+    // Membiarkan pencarian frame qr berjalan terus secara realtime
+  }
+
+  function unlockSetting() {
+    if(html5QrcodeScanner) {
+      html5QrcodeScanner.clear().then(() => {
+        document.getElementById('setupSection').classList.remove('d-none');
+        document.getElementById('scannerSection').classList.add('d-none');
+      }).catch(err => {
+        document.getElementById('setupSection').classList.remove('d-none');
+        document.getElementById('scannerSection').classList.add('d-none');
+      });
+    }
+  }
+
+  function inputManual() {
+    let nim = document.getElementById('manualNim').value.trim();
+    if(nim === "") { alert("Isi NIM terlebih dahulu!"); return; }
+    kirimDataAbsen(nim);
+    document.getElementById('manualNim').value = "";
+  }
+
+  function kirimDataAbsen(nimMhs) {
+    let labVal = document.getElementById('lab').value;
+    let kepVal = document.getElementById('keperluan').value;
+    let deskVal = document.getElementById('deskripsi').value;
+    let notifDiv = document.getElementById('notif');
+    
+    notifDiv.className = "alert alert-warning";
+    notifDiv.innerText = "Sedang memproses data NIM: " + nimMhs + "...";
+    notifDiv.classList.remove('d-none');
+
+    google.script.run.withSuccessHandler(function(respon) {
+      if(respon.status === "success") {
+        notifDiv.className = "alert alert-success";
+        if (navigator.vibrate) { navigator.vibrate(200); }
+      } else {
+        notifDiv.className = "alert alert-danger";
+      }
+      notifDiv.innerText = respon.pesan;
+    }).prosesAbsen(nimMhs, labVal, kepVal, deskVal);
+  }
+</script>
+</body>
+</html>
