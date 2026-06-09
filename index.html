@@ -82,11 +82,19 @@
     .info-log-box {
       background-color: #e9ecef;
       border-radius: 8px;
-      padding: 12px;
+      padding: 15px;
       font-size: 0.95rem;
       max-width: 450px;
       margin: 0 auto 15px auto;
       text-align: left;
+    }
+
+    /* Memastikan ukuran lebar badge seragam di dalam grid info */
+    .info-log-box .badge {
+      display: inline-block;
+      width: 100%;
+      text-align: center;
+      padding: 6px 4px;
     }
   </style>
 </head>
@@ -128,20 +136,34 @@
       <div class="card-body text-center shadow-sm">
         
         <div class="info-log-box border-start border-primary border-3">
-          <div class="row g-2">
-            <div class="col-12">
-              <span class="badge bg-primary me-1">Nama Laboratorium</span> 
-              <strong id="displayLab">-</strong>
+          
+          <div class="row align-items-center mb-2">
+            <div class="col-5 col-sm-4">
+              <span class="badge bg-primary">Nama Lab</span>
             </div>
-            <div class="col-12">
-              <span class="badge bg-secondary me-1">Keperluan</span> 
-              <strong id="displayKeperluan">-</strong>
+            <div class="col-7 col-sm-8 text-start">
+              <strong id="displayLab" class="text-dark">-</strong>
             </div>
-            <div class="col-12" id="boxDisplayCatatan">
-              <span class="badge bg-dark me-1">Catatan</span> 
+          </div>
+
+          <div class="row align-items-center mb-2">
+            <div class="col-5 col-sm-4">
+              <span class="badge bg-secondary">Keperluan</span>
+            </div>
+            <div class="col-7 col-sm-8 text-start">
+              <strong id="displayKeperluan" class="text-dark">-</strong>
+            </div>
+          </div>
+
+          <div class="row align-items-center" id="boxDisplayCatatan">
+            <div class="col-5 col-sm-4">
+              <span class="badge bg-dark">Catatan</span>
+            </div>
+            <div class="col-7 col-sm-8 text-start">
               <span id="displayCatatan" class="text-muted fst-italic">-</span>
             </div>
           </div>
+
         </div>
         
         <div id="reader"></div>
@@ -167,7 +189,6 @@
   let html5Qrcode; 
   let isProcessing = false;
 
-  // Variabel Global Aman untuk menampung data log terpilih
   let akunLabTerkunci = "";
   let keperluanTerkunci = "";
   let catatanTerkunci = "";
@@ -223,23 +244,20 @@
       return;
     }
 
-    // Amankan data langsung ke dalam variabel global
     akunLabTerkunci = labVal;
     keperluanTerkunci = kepVal;
     catatanTerkunci = deskVal === "" ? "-" : deskVal;
 
-    // Tampilkan data ke kotak rangkuman atas kamera
     document.getElementById('displayLab').innerText = akunLabTerkunci;
     document.getElementById('displayKeperluan').innerText = keperluanTerkunci;
     
     if(deskVal !== "") {
       document.getElementById('displayCatatan').innerText = catatanTerkunci;
-      document.getElementById('boxDisplayCatatan').classList.remove('d-none');
+      document.getElementById('boxDisplayCatatan').style.setProperty('display', 'flex', 'important');
     } else {
-      document.getElementById('boxDisplayCatatan').classList.add('d-none');
+      document.getElementById('boxDisplayCatatan').style.setProperty('display', 'none', 'important');
     }
 
-    // Pindah Halaman
     document.getElementById('setupSection').classList.add('d-none');
     document.getElementById('scannerSection').classList.remove('d-none');
     startScanner();
@@ -311,7 +329,6 @@
       notifManualDiv.classList.remove('d-none');
     }
 
-    // Menggunakan variabel global terkunci agar data dijamin terkirim akurat
     const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(akunLabTerkunci)}&keperluan=${encodeURIComponent(keperluanTerkunci)}&catatan=${encodeURIComponent(catatanTerkunci)}`;
 
     fetch(urlKirim)
