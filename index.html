@@ -55,7 +55,7 @@
     .info-log-box {
       background-color: #e9ecef;
       border-radius: 8px;
-      padding: 10px;
+      padding: 12px;
       font-size: 0.95rem;
       max-width: 450px;
       margin: 0 auto 15px auto;
@@ -126,10 +126,16 @@
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <script>
+  // URL Deployment Web App Google Apps Script Anda
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwM0RJ6qvs-bAKx9FNtOP96sT6RB8ym8Hglq-wJhPLbtted66dvgcUhe1j-IRWbnopt/exec"; 
 
   let html5Qrcode; 
   let isProcessing = false;
+
+  // 📌 VARIABEL GLOBAL UNTUK MENGUNCI DATA AGAR TIDAK HILANG SAAT DIKIRIM
+  let lockedLab = "";
+  let lockedKeperluan = "";
+  let lockedCatatan = "";
 
   window.onload = function() {
     muatOpsiDariSheets();
@@ -182,17 +188,24 @@
       return;
     }
 
-    // 📌 TEMPELKAN TEKS PILIHAN KE BOX ATAS KAMERA SEBELUM PINDAH HALAMAN
-    document.getElementById('displayLab').innerText = labVal;
-    document.getElementById('displayKeperluan').innerText = kepVal;
+    // 📌 1. SIMPAN PERMANEN DATA PILIHAN KE VARIABEL GLOBAL
+    lockedLab = labVal;
+    lockedKeperluan = kepVal;
+    lockedCatatan = deskVal;
+
+    // 📌 2. TAMPILKAN TEKS DI BOX ATAS KAMERA
+    document.getElementById('displayLab').innerText = lockedLab;
+    document.getElementById('displayKeperluan').innerText = lockedKeperluan;
     
-    if(deskVal !== "") {
-      document.getElementById('displayCatatan').innerText = deskVal;
+    if(lockedCatatan !== "") {
+      document.getElementById('displayCatatan').innerText = lockedCatatan;
       document.getElementById('boxDisplayCatatan').classList.remove('d-none');
     } else {
-      document.getElementById('boxDisplayCatatan').classList.add('d-none'); // Sembunyikan baris catatan jika kosong
+      document.getElementById('displayCatatan').innerText = "-";
+      document.getElementById('boxDisplayCatatan').classList.remove('d-none'); 
     }
 
+    // Pindah halaman ke area scanner
     document.getElementById('setupSection').classList.add('d-none');
     document.getElementById('scannerSection').classList.remove('d-none');
     startScanner();
@@ -254,10 +267,6 @@
   }
 
   function kirimDataAbsen(nimMhs, isFromCamera) {
-    let labVal = document.getElementById('lab').value;
-    let kepVal = document.getElementById('keperluan').value;
-    let deskVal = document.getElementById('deskripsi').value;
-    
     let notifManualDiv = document.getElementById('notifManual');
     let overlayDiv = document.getElementById('cameraOverlay');
 
@@ -267,7 +276,8 @@
       notifManualDiv.classList.remove('d-none');
     }
 
-    const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(labVal)}&keperluan=${encodeURIComponent(kepVal)}&catatan=${encodeURIComponent(deskVal)}`;
+    // 📌 SEKARANG DATA YANG DIKIRIM DIAMBIL DARI VARIABEL YANG SUDAH DIKUNCI
+    const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(lockedLab)}&keperluan=${encodeURIComponent(lockedKeperluan)}&catatan=${encodeURIComponent(lockedCatatan)}`;
 
     fetch(urlKirim)
       .then(response => response.json())
@@ -292,13 +302,13 @@
           }
         }
 
-        // REFRESH KAMERA OTOMATIS JEDA 2 DETIK
+        // REFRESH KAMERA JEDA 2 DETIK
         if(isFromCamera) {
           setTimeout(() => {
             document.getElementById('reader').innerHTML = ""; 
             startScanner(); 
             isProcessing = false;
-          }, 2000); // Kunci 2 detik sesuai modifikasi sebelumnya
+          }, 2000); 
         } else {
           isProcessing = false;
         }
