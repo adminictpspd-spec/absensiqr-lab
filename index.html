@@ -16,6 +16,13 @@
       border-radius: 10px;
       background-color: #ffffff;
       min-height: 250px;
+      position: relative;
+      transition: background-color 0.3s ease;
+    }
+    /* Efek visual ketika QR sukses ter-scan */
+    .scan-success-flash {
+      background-color: #d1e7dd !important;
+      border-color: #198754 !important;
     }
     #reader button {
       display: inline-block; font-weight: 400; text-align: center; white-space: nowrap; vertical-align: middle;
@@ -28,6 +35,11 @@
       display: inline-block; padding: .375rem 2.25rem .375rem .75rem; font-size: 1rem; font-weight: 400;
       line-height: 1.5; color: #212529; background-color: #fff; border: 1px solid #ced4da; border-radius: .25rem;
       margin: 10px auto; max-width: 90%;
+    }
+    /* Style untuk pesan status besar di dalam kotak scanner */
+    .scanner-overlay-msg {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      font-size: 1.25rem; font-weight: bold; width: 90%; text-align: center; z-index: 10;
     }
   </style>
 </head>
@@ -78,15 +90,11 @@
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <script>
-  // =========================================================================
-  // ⚠️ PASTE URL WEB APP (LENGKAP DENGAN /exec) YANG ANDA SALIN DI SINI:
-  // =========================================================================
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwM0RJ6qvs-bAKx9FNtOP96sT6RB8ym8Hglq-wJhPLbtted66dvgcUhe1j-IRWbnopt/exec"; 
 
   let html5QrcodeScanner;
   let isProcessing = false;
 
-  // Mengambil opsi pilihan otomatis dari sheet saat halaman dibuka di GitHub
   window.onload = function() {
     muatOpsiDariSheets();
   };
@@ -115,14 +123,7 @@
       });
   }
 
-  function lockSetting() {
-    if(!document.getElementById('lab').value || !document.getElementById('keperluan').value) {
-      alert('Mohon pastikan Lab dan Keperluan sudah terpilih!');
-      return;
-    }
-    document.getElementById('setupSection').classList.add('d-none');
-    document.getElementById('scannerSection').classList.remove('d-none');
-    
+  function startScanner() {
     try {
       html5QrcodeScanner = new Html5QrcodeScanner(
         "reader", 
@@ -140,26 +141,54 @@
     }
   }
 
+  function lockSetting() {
+    if(!document.getElementById('lab').value || !document.getElementById('keperluan').value) {
+      alert('Mohon pastikan Lab dan Keperluan sudah terpilih!');
+      return;
+    }
+    document.getElementById('setupSection').classList.add('d-none');
+    document.getElementById('scannerSection').classList.remove('d-none');
+    startScanner();
+  }
+
   function onScanSuccess(decodedText, decodedResult) {
     if(decodedText && !isProcessing) {
       isProcessing = true;
-      kirimDataAbsen(decodedText.trim());
-      // Jeda 2,5 detik agar tidak men-scan berkali-kali secara tidak sengaja
-      setTimeout(() => { isProcessing = false; }, 2500);
+      
+      // 1. Berikan efek flash hijau pada kotak scanner
+      const readerDiv = document.getElementById('reader');
+      readerDiv.classList.add('scan-success-flash');
+      
+      // Get data input
+      let nimMhs = decodedText.trim();
+      
+      // 2. Matikan kamera sementara agar layar freeze & memunculkan teks loading besar
+      if(html5QrcodeScanner) {
+        html5QrcodeScanner.clear().then(() => {
+          readerDiv.innerHTML = `<div class="scanner-overlay-msg text-primary"><div class="spinner-border text-primary mb-2" role="status"></div><br>Menyimpan NIM: ${nimMhs}...</div>`;
+          kirimDataAbsen(nimMhs, true); // true menandakan input berasal dari kamera
+        }).catch(err => {
+          kirimDataAbsen(nimMhs, false);
+        });
+      } else {
+        kirimDataAbsen(nimMhs, false);
+      }
     }
   }
 
   function onScanFailure(error) {
-    // Membiarkan scanner terus mencari QR code secara real-time
+    // Membiarkan pencarian frame berjalan terus
   }
 
   function unlockSetting() {
     if(html5QrcodeScanner) {
       html5QrcodeScanner.clear().then(() => {
+        resetReaderBox();
         document.getElementById('setupSection').classList.remove('d-none');
         document.getElementById('scannerSection').classList.add('d-none');
       }).catch(err => {
-        document.getElementById('setupSection').classList.remove('d-none');
+        resetReaderBox();
+        document.getElementById('setupSection').classList.remove('0-none');
         document.getElementById('scannerSection').classList.add('d-none');
       });
     }
@@ -168,22 +197,27 @@
   function inputManual() {
     let nim = document.getElementById('manualNim').value.trim();
     if(nim === "") { alert("Isi NIM terlebih dahulu!"); return; }
-    kirimDataAbsen(nim);
+    kirimDataAbsen(nim, false); // false karena input manual, tidak perlu mematikan kamera
     document.getElementById('manualNim').value = "";
   }
 
-  // MENGGUNAKAN METODE FETCH URL WEB APP GITHUB -> GOOGLE SHEETS
-  function kirimDataAbsen(nimMhs) {
+  function resetReaderBox() {
+    const readerDiv = document.getElementById('reader');
+    readerDiv.className = ""; 
+    readerDiv.innerHTML = ""; 
+  }
+
+  function kirimDataAbsen(nimMhs, isFromCamera) {
     let labVal = document.getElementById('lab').value;
     let kepVal = document.getElementById('keperluan').value;
     let deskVal = document.getElementById('deskripsi').value;
     let notifDiv = document.getElementById('notif');
+    const readerDiv = document.getElementById('reader');
     
     notifDiv.className = "alert alert-warning";
     notifDiv.innerText = "Sedang memproses data NIM: " + nimMhs + "...";
     notifDiv.classList.remove('d-none');
 
-    // Menembak data ke Google Apps Script menggunakan Fetch API (Menggantikan google.script.run)
     const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(labVal)}&keperluan=${encodeURIComponent(kepVal)}&catatan=${encodeURIComponent(deskVal)}`;
 
     fetch(urlKirim)
@@ -192,15 +226,45 @@
         if(respon.status === "success") {
           notifDiv.className = "alert alert-success";
           if (navigator.vibrate) { navigator.vibrate(200); }
+          
+          // Jika dari kamera, tampilkan status sukses BESAR di dalam kotak selama 2.5 detik
+          if(isFromCamera) {
+            readerDiv.innerHTML = `<div class="scanner-overlay-msg text-success"><span style="font-size: 2.5rem;">✅</span><br>${respon.pesan}</div>`;
+          }
         } else {
           notifDiv.className = "alert alert-danger";
+          if(isFromCamera) {
+            readerDiv.innerHTML = `<div class="scanner-overlay-msg text-danger"><span style="font-size: 2.5rem;">❌</span><br>Gagal: ${respon.pesan}</div>`;
+          }
         }
         notifDiv.innerText = respon.pesan;
+
+        // JEDA REFRESH: Setelah 2.5 detik, bersihkan layar dan nyalakan kembali kamera otomatis
+        if(isFromCamera) {
+          setTimeout(() => {
+            resetReaderBox();
+            startScanner();
+            isProcessing = false;
+          }, 2500);
+        } else {
+          isProcessing = false;
+        }
       })
       .catch(err => {
         console.error(err);
         notifDiv.className = "alert alert-danger";
         notifDiv.innerText = "Gagal terhubung ke server Google Sheets.";
+        
+        if(isFromCamera) {
+          readerDiv.innerHTML = `<div class="scanner-overlay-msg text-danger">❌<br>Gagal terhubung ke server.</div>`;
+          setTimeout(() => {
+            resetReaderBox();
+            startScanner();
+            isProcessing = false;
+          }, 2500);
+        } else {
+          isProcessing = false;
+        }
       });
   }
 </script>
