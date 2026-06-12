@@ -212,7 +212,12 @@
           
           <div id="notifManual" class="alert d-none mt-3 text-start" style="max-width: 450px; margin: 15px auto 0 auto; white-space: pre-line;"></div>
           
-          <div class="card border border-secondary-subtle mt-4 text-start" style="max-width: 450px; margin: 0 auto;">
+          <div class="input-group mb-3 mt-4" style="max-width: 450px; margin: 20px auto 0 auto;">
+            <input type="text" id="manualNim" class="form-control" placeholder="Input NIM manual jika QR rusak">
+            <button class="btn btn-secondary fw-semibold" type="button" onclick="inputManual()">Submit Manual</button>
+          </div>
+
+          <div class="card border border-secondary-subtle mt-3 text-start" style="max-width: 450px; margin: 0 auto;">
             <div class="card-header bg-light py-2 px-3 fw-semibold text-secondary" style="font-size: 0.9rem;">
               🚀 Blast Input NIM Sekaligus (Gunakan Enter)
             </div>
@@ -350,20 +355,48 @@
     // Membiarkan frame mencari QR terus
   }
 
-  // FUNGSI BARU: Memproses kiriman Blast NIM Sekaligus banyak (Enter)
+  // FUNGSI 1: Memproses input manual satu per satu
+  function inputManual() {
+    let nim = document.getElementById('manualNim').value.trim();
+    if(nim === "") { alert("Isi NIM terlebih dahulu!"); return; }
+    
+    let notifDiv = document.getElementById('notifManual');
+    notifDiv.className = "alert alert-warning";
+    notifDiv.innerText = "⏳ Sedang memproses input manual NIM: " + nim + "...";
+    notifDiv.classList.remove('d-none');
+
+    const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nim)}&lab=${encodeURIComponent(akunLabTerkunci)}&keperluan=${encodeURIComponent(keperluanTerkunci)}&catatan=${encodeURIComponent(catatanTerkunci)}`;
+
+    fetch(urlKirim)
+      .then(response => response.json())
+      .then(respon => {
+        if(respon.status === "success") {
+          notifDiv.className = "alert alert-success";
+          notifDiv.innerText = `✅ ${respon.pesan}`;
+        } else {
+          notifDiv.className = "alert alert-danger";
+          notifDiv.innerText = `❌ Gagal: ${respon.pesan}`;
+        }
+        document.getElementById('manualNim').value = "";
+      })
+      .catch(err => {
+        console.error(err);
+        notifDiv.className = "alert alert-danger";
+        notifDiv.innerText = "❌ Gagal terhubung ke server Google Sheets.";
+      });
+  }
+
+  // FUNGSI 2: Memproses kiriman Blast NIM Sekaligus banyak (Enter)
   async function inputBlastManual() {
     let rawText = document.getElementById('blastNim').value.trim();
     if(rawText === "") { alert("Mohon isi daftar NIM terlebih dahulu!"); return; }
 
-    // Memecah baris teks menggunakan regex penangkap Enter (\n atau \r)
     let daftarNim = rawText.split(/\r?\n/).map(nim => nim.trim()).filter(nim => nim !== "");
-    
     if(daftarNim.length === 0) { alert("Format input NIM tidak valid!"); return; }
 
     let notifDiv = document.getElementById('notifManual');
     let btnBlast = document.getElementById('btnBlast');
 
-    // Kunci tombol & beri info loading
     btnBlast.disabled = true;
     btnBlast.innerText = "⏳ Memproses Blast...";
     
@@ -373,7 +406,6 @@
 
     let hasilLog = [];
 
-    // Mengirim satu-per-satu menggunakan perulangan Async Await agar urutan rapi di Sheets
     for(let i = 0; i < daftarNim.length; i++) {
       let currentNim = daftarNim[i];
       notifDiv.innerText = `⏳ Mengirim (${i + 1}/${daftarNim.length}): NIM ${currentNim}...`;
@@ -393,11 +425,9 @@
       }
     }
 
-    // Tampilkan rangkuman total setelah loop selesai
     notifDiv.className = "alert alert-info";
     notifDiv.innerText = `📢 RANGKUMAN BLAST ABSENSI:\n\n` + hasilLog.join("\n");
     
-    // Reset form textarea blast
     document.getElementById('blastNim').value = "";
     btnBlast.disabled = false;
     btnBlast.innerText = "Submit Blast NIM";
@@ -421,9 +451,7 @@
   }
 
   function kirimDataAbsen(nimMhs, isFromCamera) {
-    let notifManualDiv = document.getElementById('notifManual');
     let overlayDiv = document.getElementById('cameraOverlay');
-
     const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(akunLabTerkunci)}&keperluan=${encodeURIComponent(keperluanTerkunci)}&catatan=${encodeURIComponent(catatanTerkunci)}`;
 
     fetch(urlKirim)
@@ -431,7 +459,6 @@
       .then(respon => {
         if(respon.status === "success") {
           if (navigator.vibrate) { navigator.vibrate(200); }
-
           if (isFromCamera && overlayDiv) {
             overlayDiv.className = "scanner-overlay bg-sukses";
             overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">✅</span><p>${respon.pesan}</p>`;
