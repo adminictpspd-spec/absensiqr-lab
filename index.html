@@ -165,9 +165,9 @@
               <div>
                 <strong class="d-block mb-1 text-info-emphasis">Ketentuan Pengisian Catatan:</strong>
                 <ul class="margin-bottom-0 ps-3 mb-0">
-                  <li>Jika keperluan <strong>Skripsi</strong>, diharapkan diisi di deskripsi: <span class="fst-italic">Judul Skripsi</span></li>
-                  <li>Jika keperluan <strong>Praktikum</strong>, diharapkan diisi di deskripsi: <span class="fst-italic">Nama Blok / Mata Kuliah</span></li>
-                  <li>Jika keperluan <strong>Lainnya</strong>, diharapkan diisi di deskripsi kunjungan lab untuk apa</li>
+                  <li>Jika mengisi keperluan <strong>Skripsi</strong>, diharapkan diisi di catatan: <span class="fst-italic">Judul Skripsi</span></li>
+                  <li>Jika diisi <strong>Praktikum</strong>, diharapkan diisi: <span class="fst-italic">Nama Mata Kuliah</span></li>
+                  <li>Jika <strong>Penelitian</strong>, diharapkan diisi: <span class="fst-italic">Judul Penelitian / Dari Tim Siapa</span></li>
                 </ul>
               </div>
             </div>
@@ -182,7 +182,6 @@
         <div class="card-body text-center shadow-sm">
           
           <div class="info-log-box border-start border-primary border-3">
-            
             <div class="row align-items-center mb-2">
               <div class="col-5 col-sm-4">
                 <span class="badge bg-primary">Nama Lab</span>
@@ -191,7 +190,6 @@
                 <strong id="displayLab" class="text-dark">-</strong>
               </div>
             </div>
-
             <div class="row align-items-center mb-2">
               <div class="col-5 col-sm-4">
                 <span class="badge bg-secondary">Keperluan</span>
@@ -200,7 +198,6 @@
                 <strong id="displayKeperluan" class="text-dark">-</strong>
               </div>
             </div>
-
             <div class="row align-items-center" id="boxDisplayCatatan">
               <div class="col-5 col-sm-4">
                 <span class="badge bg-dark">Catatan</span>
@@ -209,19 +206,25 @@
                 <span id="displayCatatan" class="text-muted fst-italic">-</span>
               </div>
             </div>
-
           </div>
           
           <div id="reader"></div>
           
-          <div id="notifManual" class="alert d-none mt-3" style="max-width: 450px; margin: 15px auto 0 auto;"></div>
+          <div id="notifManual" class="alert d-none mt-3 text-start" style="max-width: 450px; margin: 15px auto 0 auto; white-space: pre-line;"></div>
           
-          <div class="input-group mb-3 mt-4" style="max-width: 450px; margin: 0 auto;">
-            <input type="text" id="manualNim" class="form-control" placeholder="Input NIM manual jika QR rusak">
-            <button class="btn btn-secondary" type="button" onclick="inputManual()">Submit Manual</button>
+          <div class="card border border-secondary-subtle mt-4 text-start" style="max-width: 450px; margin: 0 auto;">
+            <div class="card-header bg-light py-2 px-3 fw-semibold text-secondary" style="font-size: 0.9rem;">
+              🚀 Blast Input NIM Sekaligus (Gunakan Enter)
+            </div>
+            <div class="card-body p-3">
+              <div class="mb-2">
+                <textarea id="blastNim" class="form-control" rows="4" style="font-size: 0.9rem;" placeholder="Salin / ketik NIM di sini&#10;221001&#10;221002&#10;221003"></textarea>
+              </div>
+              <button class="btn btn-secondary w-100 fw-semibold" type="button" id="btnBlast" onclick="inputBlastManual()">Submit Blast NIM</button>
+            </div>
           </div>
           
-          <button class="btn btn-warning btn-sm mt-2 mb-2" onclick="unlockSetting()">Ubah Pengaturan Awal</button>
+          <button class="btn btn-warning btn-sm mt-4 mb-2" onclick="unlockSetting()">Ubah Pengaturan Awal</button>
         </div>
       </div>
     </div>
@@ -230,7 +233,7 @@
 
 <footer>
   <div class="container">
-    <span>Developed by <strong>Helmi F</strong> Using Gemini AI</span>
+    <span>Developed by <strong>Admin ICT PSPD</strong> with ❤️</span>
   </div>
 </footer>
 
@@ -347,12 +350,57 @@
     // Membiarkan frame mencari QR terus
   }
 
-  function inputManual() {
-    let nim = document.getElementById('manualNim').value.trim();
-    if(nim === "") { alert("Isi NIM terlebih dahulu!"); return; }
+  // FUNGSI BARU: Memproses kiriman Blast NIM Sekaligus banyak (Enter)
+  async function inputBlastManual() {
+    let rawText = document.getElementById('blastNim').value.trim();
+    if(rawText === "") { alert("Mohon isi daftar NIM terlebih dahulu!"); return; }
+
+    // Memecah baris teks menggunakan regex penangkap Enter (\n atau \r)
+    let daftarNim = rawText.split(/\r?\n/).map(nim => nim.trim()).filter(nim => nim !== "");
     
-    kirimDataAbsen(nim, false); 
-    document.getElementById('manualNim').value = "";
+    if(daftarNim.length === 0) { alert("Format input NIM tidak valid!"); return; }
+
+    let notifDiv = document.getElementById('notifManual');
+    let btnBlast = document.getElementById('btnBlast');
+
+    // Kunci tombol & beri info loading
+    btnBlast.disabled = true;
+    btnBlast.innerText = "⏳ Memproses Blast...";
+    
+    notifDiv.className = "alert alert-warning";
+    notifDiv.innerText = `Memulai pengiriman untuk ${daftarNim.length} mahasiswa, mohon tunggu sebentar...`;
+    notifDiv.classList.remove('d-none');
+
+    let hasilLog = [];
+
+    // Mengirim satu-per-satu menggunakan perulangan Async Await agar urutan rapi di Sheets
+    for(let i = 0; i < daftarNim.length; i++) {
+      let currentNim = daftarNim[i];
+      notifDiv.innerText = `⏳ Mengirim (${i + 1}/${daftarNim.length}): NIM ${currentNim}...`;
+      
+      const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(currentNim)}&lab=${encodeURIComponent(akunLabTerkunci)}&keperluan=${encodeURIComponent(keperluanTerkunci)}&catatan=${encodeURIComponent(catatanTerkunci)}`;
+      
+      try {
+        let response = await fetch(urlKirim);
+        let responJson = await response.json();
+        if(responJson.status === "success") {
+          hasilLog.push(`✅ NIM ${currentNim}: Berhasil (${responJson.pesan.split(' - ')[0]})`);
+        } else {
+          hasilLog.push(`❌ NIM ${currentNim}: Gagal (${responJson.pesan})`);
+        }
+      } catch (err) {
+        hasilLog.push(`❌ NIM ${currentNim}: Gagal (Masalah Jaringan)`);
+      }
+    }
+
+    // Tampilkan rangkuman total setelah loop selesai
+    notifDiv.className = "alert alert-info";
+    notifDiv.innerText = `📢 RANGKUMAN BLAST ABSENSI:\n\n` + hasilLog.join("\n");
+    
+    // Reset form textarea blast
+    document.getElementById('blastNim').value = "";
+    btnBlast.disabled = false;
+    btnBlast.innerText = "Submit Blast NIM";
   }
 
   function unlockSetting() {
@@ -376,12 +424,6 @@
     let notifManualDiv = document.getElementById('notifManual');
     let overlayDiv = document.getElementById('cameraOverlay');
 
-    if (!isFromCamera) {
-      notifManualDiv.className = "alert alert-warning";
-      notifManualDiv.innerText = "Sedang memproses input manual NIM: " + nimMhs + "...";
-      notifManualDiv.classList.remove('d-none');
-    }
-
     const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(akunLabTerkunci)}&keperluan=${encodeURIComponent(keperluanTerkunci)}&catatan=${encodeURIComponent(catatanTerkunci)}`;
 
     fetch(urlKirim)
@@ -393,17 +435,11 @@
           if (isFromCamera && overlayDiv) {
             overlayDiv.className = "scanner-overlay bg-sukses";
             overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">✅</span><p>${respon.pesan}</p>`;
-          } else {
-            notifManualDiv.className = "alert alert-success";
-            notifManualDiv.innerText = respon.pesan;
           }
         } else {
           if (isFromCamera && overlayDiv) {
             overlayDiv.className = "scanner-overlay bg-gagal";
             overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">❌</span><p>Gagal: ${respon.pesan}</p>`;
-          } else {
-            notifManualDiv.className = "alert alert-danger";
-            notifManualDiv.innerText = respon.pesan;
           }
         }
 
@@ -413,8 +449,6 @@
             startScanner(); 
             isProcessing = false;
           }, 2000); 
-        } else {
-          isProcessing = false;
         }
       })
       .catch(err => {
@@ -427,10 +461,6 @@
             startScanner();
             isProcessing = false;
           }, 2000);
-        } else {
-          notifManualDiv.className = "alert alert-danger";
-          notifManualDiv.innerText = "Gagal terhubung ke server Google Sheets.";
-          isProcessing = false;
         }
       });
   }
