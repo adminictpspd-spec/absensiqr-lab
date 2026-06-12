@@ -6,7 +6,6 @@
   <title>Sistem Absensi QR Laboratorium</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    /* Mengatur halaman agar footer selalu berada di bagian bawah */
     html, body {
       height: 100%;
     }
@@ -60,7 +59,7 @@
       overflow: hidden;
     }
 
-    /* Lapisan Overlay yang Memblokir Kamera */
+    /* Lapisan Overlay Kamera */
     .scanner-overlay {
       position: absolute;
       top: 0;
@@ -89,7 +88,6 @@
 
     #reader video { width: 100% !important; border-radius: 8px; object-fit: cover; }
 
-    /* Style komponen rangkuman info di atas kamera */
     .info-log-box {
       background-color: #e9ecef;
       border-radius: 8px;
@@ -100,7 +98,6 @@
       text-align: left;
     }
 
-    /* Memastikan ukuran lebar badge seragam di dalam grid info */
     .info-log-box .badge {
       display: inline-block;
       width: 100%;
@@ -108,13 +105,11 @@
       padding: 6px 4px;
     }
 
-    /* Gaya khusus teks panduan pengisian catatan */
     .petunjuk-catatan {
       font-size: 0.88rem;
       line-height: 1.5;
     }
 
-    /* Footer Institusi */
     footer {
       flex-shrink: 0;
       background-color: #ffffff;
@@ -355,7 +350,7 @@
     // Membiarkan frame mencari QR terus
   }
 
-  // FUNGSI 1: Memproses input manual satu per satu
+  // FUNGSI 1: Memproses input manual satu per satu dengan proteksi "Tidak Dikenal"
   function inputManual() {
     let nim = document.getElementById('manualNim').value.trim();
     if(nim === "") { alert("Isi NIM terlebih dahulu!"); return; }
@@ -370,12 +365,13 @@
     fetch(urlKirim)
       .then(response => response.json())
       .then(respon => {
-        if(respon.status === "success") {
+        // VALIDASI: Deteksi jika respon dari GS mengandung kata "Tidak Dikenal"
+        if(respon.status === "success" && !respon.pesan.includes("Tidak Dikenal")) {
           notifDiv.className = "alert alert-success";
           notifDiv.innerText = `✅ ${respon.pesan}`;
         } else {
           notifDiv.className = "alert alert-danger";
-          notifDiv.innerText = `❌ Gagal: ${respon.pesan}`;
+          notifDiv.innerText = `❌ Ditolak: NIM (${nim}) tidak terdaftar di database mahasiswa!`;
         }
         document.getElementById('manualNim').value = "";
       })
@@ -386,7 +382,7 @@
       });
   }
 
-  // FUNGSI 2: Memproses kiriman Blast NIM Sekaligus banyak (Enter)
+  // FUNGSI 2: Memproses kiriman Blast NIM dengan proteksi "Tidak Dikenal"
   async function inputBlastManual() {
     let rawText = document.getElementById('blastNim').value.trim();
     if(rawText === "") { alert("Mohon isi daftar NIM terlebih dahulu!"); return; }
@@ -415,10 +411,12 @@
       try {
         let response = await fetch(urlKirim);
         let responJson = await response.json();
-        if(responJson.status === "success") {
+        
+        // VALIDASI: Jika sukses tapi nama mahasiswanya "Tidak Dikenal"
+        if(responJson.status === "success" && !responJson.pesan.includes("Tidak Dikenal")) {
           hasilLog.push(`✅ NIM ${currentNim}: Berhasil (${responJson.pesan.split(' - ')[0]})`);
         } else {
-          hasilLog.push(`❌ NIM ${currentNim}: Gagal (${responJson.pesan})`);
+          hasilLog.push(`❌ NIM ${currentNim}: Ditolak (Tidak ada di database)`);
         }
       } catch (err) {
         hasilLog.push(`❌ NIM ${currentNim}: Gagal (Masalah Jaringan)`);
@@ -450,6 +448,7 @@
     document.getElementById('notifManual').classList.add('d-none');
   }
 
+  // FUNGSI 3: Kamera Scanner Utama dengan proteksi "Tidak Dikenal"
   function kirimDataAbsen(nimMhs, isFromCamera) {
     let overlayDiv = document.getElementById('cameraOverlay');
     const urlKirim = `${WEB_APP_URL}?nim=${encodeURIComponent(nimMhs)}&lab=${encodeURIComponent(akunLabTerkunci)}&keperluan=${encodeURIComponent(keperluanTerkunci)}&catatan=${encodeURIComponent(catatanTerkunci)}`;
@@ -457,7 +456,8 @@
     fetch(urlKirim)
       .then(response => response.json())
       .then(respon => {
-        if(respon.status === "success") {
+        // VALIDASI: Cegah "Tidak Dikenal" dari kamera scanner
+        if(respon.status === "success" && !respon.pesan.includes("Tidak Dikenal")) {
           if (navigator.vibrate) { navigator.vibrate(200); }
           if (isFromCamera && overlayDiv) {
             overlayDiv.className = "scanner-overlay bg-sukses";
@@ -466,7 +466,7 @@
         } else {
           if (isFromCamera && overlayDiv) {
             overlayDiv.className = "scanner-overlay bg-gagal";
-            overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">❌</span><p>Gagal: ${respon.pesan}</p>`;
+            overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">❌</span><p>Ditolak!<br><span style="font-size:0.95rem; font-weight:normal;">NIM tidak terdaftar di database.</span></p>`;
           }
         }
 
@@ -475,14 +475,14 @@
             document.getElementById('reader').innerHTML = ""; 
             startScanner(); 
             isProcessing = false;
-          }, 2000); 
+          }, 3000); // Durasi overlay error/sukses kamera dinaikkan sedikit ke 3 detik agar terbaca jelas
         }
       })
       .catch(err => {
         console.error(err);
         if (isFromCamera && overlayDiv) {
           overlayDiv.className = "scanner-overlay bg-gagal";
-          overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">❌</span><p>Koneksi ke Google Sheets Terputus!</p>`;
+          overlayDiv.innerHTML = `<span style="font-size: 3.5rem;">❌</span><p>Koneksi ke Server Terputus!</p>`;
           setTimeout(() => {
             document.getElementById('reader').innerHTML = "";
             startScanner();
